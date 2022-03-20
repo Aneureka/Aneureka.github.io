@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>散落的叶子</title>
+  <icon>https://www.aneureka.cn/source/img/favicon.ico</icon>
+  
+  <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
+  
+  <link href="https://www.aneureka.cn/"/>
+  <updated>2022-03-20T11:07:40.327Z</updated>
+  <id>https://www.aneureka.cn/</id>
+  
+  <author>
+    <name>Aneureka</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>从「各种缩写我都知道！」切入，讲讲 Side Project 的前期工作</title>
+    <link href="https://www.aneureka.cn/abbr-bot-2021-10-04/"/>
+    <id>https://www.aneureka.cn/abbr-bot-2021-10-04/</id>
+    <published>2021-10-04T13:12:21.000Z</published>
+    <updated>2022-03-20T11:07:40.327Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;国庆期间趁着心情得以平静，我对未来几年进行了一次模糊的规划，也重新制定了短期的目标，其中有一项是「输入 ↦ 输出」。长期贫瘠的「输入 ↦</summary>
+        
+      
+    
+    
+    
+    
+    <category term="Project" scheme="https://www.aneureka.cn/tags/Project/"/>
+    
+    <category term="Thoughts" scheme="https://www.aneureka.cn/tags/Thoughts/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>分享我的 Notion 使用方式</title>
+    <link href="https://www.aneureka.cn/notion-practice-2021-05-08/"/>
+    <id>https://www.aneureka.cn/notion-practice-2021-05-08/</id>
+    <published>2021-05-07T16:17:54.000Z</published>
+    <updated>2022-03-20T11:07:40.335Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;&lt;a href=&quot;https://www.notion.so/&quot;&gt;Notion&lt;/a&gt; 是我最喜爱的笔记软件（或谓之知识管理工具），从去年到现在通过 Notion</summary>
+        
+      
+    
+    
+    
+    
+    <category term="笔记" scheme="https://www.aneureka.cn/tags/%E7%AC%94%E8%AE%B0/"/>
+    
+    <category term="效率" scheme="https://www.aneureka.cn/tags/%E6%95%88%E7%8E%87/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>一种关于计划的 Workflow</title>
+    <link href="https://www.aneureka.cn/plan-2021-01-31/"/>
+    <id>https://www.aneureka.cn/plan-2021-01-31/</id>
+    <published>2021-01-31T08:00:15.000Z</published>
+    <updated>2022-03-20T11:07:40.336Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;让人既爱又恨的事物实在太多了，比如写文章。&lt;/p&gt;
+&lt;p&gt;Updated on 2021/09/10：已经不用滴答清单写 OKR</summary>
+        
+      
+    
+    
+    
+    
+    <category term="生活" scheme="https://www.aneureka.cn/tags/%E7%94%9F%E6%B4%BB/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>2020，都做了些啥</title>
+    <link href="https://www.aneureka.cn/2020-review-2021-01-05/"/>
+    <id>https://www.aneureka.cn/2020-review-2021-01-05/</id>
+    <published>2021-01-04T16:51:05.000Z</published>
+    <updated>2022-03-20T11:07:40.326Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;虽然对农村长大的我来说，元旦没有带来强烈的“新的一年”的仪式感和割裂感，但总而言之“新的一年”迟早都要来了，就当是还没有迟到，给自己一个年度的总结和交代。&lt;/p&gt;
+&lt;p&gt;&lt;i</summary>
+        
+      
+    
+    
+    
+    
+    <category term="生活" scheme="https://www.aneureka.cn/tags/%E7%94%9F%E6%B4%BB/"/>
+    
+  </entry>
+  
+</feed>
