@@ -6,7 +6,7 @@
   <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
   
   <link href="https://www.aneureka.cn/"/>
-  <updated>2022-03-20T11:07:40.327Z</updated>
+  <updated>2022-11-26T07:18:21.118Z</updated>
   <id>https://www.aneureka.cn/</id>
   
   <author>
@@ -15,6 +15,33 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Effective Modern C++ 读书笔记</title>
+    <link href="https://www.aneureka.cn/effective-modern-cpp-notes-2022-11-26/"/>
+    <id>https://www.aneureka.cn/effective-modern-cpp-notes-2022-11-26/</id>
+    <published>2022-11-26T07:16:05.000Z</published>
+    <updated>2022-11-26T07:18:21.118Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;本着 &lt;a href=&quot;https://en.wikipedia.org/wiki/Learning_by_teaching&quot;&gt;Learning by teaching&lt;/a&gt; 的原则，结合目前自己的一些现代 C++</summary>
+        
+      
+    
+    
+    
+    
+    <category term="C++" scheme="https://www.aneureka.cn/tags/C/"/>
+    
+    <category term="C++11" scheme="https://www.aneureka.cn/tags/C-11/"/>
+    
+    <category term="C++14" scheme="https://www.aneureka.cn/tags/C-14/"/>
+    
+  </entry>
   
   <entry>
     <title>从「各种缩写我都知道！」切入，讲讲 Side Project 的前期工作</title>

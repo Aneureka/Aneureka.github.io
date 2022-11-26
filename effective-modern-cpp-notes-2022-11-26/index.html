@@ -1,0 +1,1087 @@
+<html>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="Aneureka" />
+  <meta name="description" content="要技艺超群，要予人温暖。" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    property="og:title"
+    content="Effective Modern C++ 读书笔记 · 散落的叶子"
+  />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://www.aneureka.cn/effective-modern-cpp-notes-2022-11-26/index.html" />
+  <meta property="og:description" content="要技艺超群，要予人温暖。" />
+  <meta property="og:image" content="https://www.aneureka.cn/img/favicon.ico" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@Aneureka" />
+  <meta name="twitter:url" content="https://www.aneureka.cn/effective-modern-cpp-notes-2022-11-26/index.html" />
+  <meta name="twitter:title" content="散落的叶子" />
+  <meta name="twitter:description" content="要技艺超群，要予人温暖。" />
+  <meta name="twitter:image" content="https://www.aneureka.cn/img/cover.png" />
+  <title>
+    Effective Modern C++ 读书笔记 · 散落的叶子
+  </title>
+  
+  <link rel="icon" href="/img/favicon.ico" />
+  <link rel="apple-touch-icon" href="/img/favicon.ico" />
+  <link rel="bookmark" href="/img/favicon.ico" />
+  <link rel="shortcut icon" href="/img/favicon.ico" />
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+  
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+   
+<link rel="stylesheet" href="/css/blog.css">
+ 
+<link rel="stylesheet" href="/css/global.css">
+
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="散落的叶子" type="application/atom+xml">
+</head>
+
+  <body>
+    <div class="blog-header section">
+  <nav>
+    <div class="container main header">
+      <a href="/">
+        <img class="logo" src="/img/favicon.ico" />
+      </a>
+      <div class="menu">
+        
+        <a class="menu-item" href="/">
+          <span class="menu-item-text">散落的叶子</span>
+        </a>
+        
+      </div>
+    </div>
+  </nav>
+</div>
+ <div class="section">
+  <div class="container main post">
+    
+    <!-- Title -->
+    <h2 class="title">Effective Modern C++ 读书笔记</h2>
+    <!-- Date and Author -->
+    <p class="subtitle is-7 has-text-grey">
+      2022-11-26 by Aneureka
+    </p>
+    
+    <!-- Content -->
+    <article class="markdown-body"><p>本着 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Learning_by_teaching">Learning by teaching</a> 的原则，结合目前自己的一些现代 C++ 实践，小小记录一下。能力所限，本文不可避免地会有考虑不周的地方，还请大家多多指正🤣。</p>
+<h2 id="类型推导"><a href="#类型推导" class="headerlink" title="类型推导"></a>类型推导</h2><blockquote>
+<p>突击检查： <code>char const *(*(* const bar)[5]) (int)</code> 是什么类型？</p>
+</blockquote>
+<p>不过我们今天的主题不是做类型体操，而是讨论一下在引入 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/auto">auto</a> 、 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/decltype">decltype</a> 等关键字后，C++ 的类型推导主要分为哪些，如何进行。</p>
+<h3 id="模板类型推导"><a href="#模板类型推导" class="headerlink" title="模板类型推导"></a>模板类型推导</h3><p>C++ 函数模板的使用可归结为以下形式：</p>
+<pre><code class="cpp">// 声明
+template &lt;T&gt;
+void f(ParamType param); // 其中 ParamType 为包含 T 的组合类型
+
+// 调用
+f(expr);
+</code></pre>
+<p>例如对于以下函数模板和调用语句：</p>
+<pre><code class="cpp">template &lt;T&gt;
+void f(const T &amp;param);
+
+int x = 0x114;
+f(x);
+</code></pre>
+<p><code>T</code> 将被推导为 <code>int</code> ， <code>ParamType</code> 则为 <code>const T &amp;</code> 。</p>
+<p>这个简单的例子可能会让我们误以为 <code>T</code> 的类型仅依赖 <code>expr</code> ，实际上并非如此， <code>T</code> 的类型推导结果还依赖于 <code>ParamType</code> 的形式，可总结为以下三种情况。</p>
+<p><strong>一、 <code>ParamType</code> 是个指针或引用（但不是万能引用）</strong></p>
+<p>这种情况下，类型推导过程遵循以下原则：</p>
+<ol>
+<li><p> <code>expr</code> 的 reference-ness 会被忽略：引用的引用还是引用（想起了阿尼亚的表情包）</p>
+</li>
+<li><p> <code>expr</code> 的 constness 会被保留：当函数的形参为引用类型时，调用者肯定不希望原本为 <code>const</code> 的常量在调用后被修改了</p>
+</li>
+</ol>
+<p>举个例子，</p>
+<pre><code class="cpp">template&lt;typename T&gt;
+void f(T &amp;param); // ParamType 为 T&amp;
+
+int x = 0x114;
+const int cx = x;
+const int &amp;rx = x;
+
+f(x);   // T -&gt; int,       ParamType -&gt; int&amp;
+f(cx);  // T -&gt; const int, ParamType -&gt; const int&amp;
+f(rx);  // T -&gt; const int, ParamType -&gt; const int&amp;
+</code></pre>
+<p>对于原则二，如果 <code>ParamType</code> 本来就是 <code>const</code> 引用类型，此时 <code>T</code> 就没必要推导为 <code>const</code> 类型了，例如</p>
+<pre><code class="cpp">template&lt;typename T&gt;
+void f(const T &amp;param);
+
+int y = 0x514;
+const int cy = y;
+
+f(cy);  // T -&gt; int,       ParamType -&gt; const int&amp;
+</code></pre>
+<p>对于指针，也是一样的推导过程。</p>
+<p><strong>二、 <code>ParamType</code> 是个万能引用</strong></p>
+<p>C++11 引入<a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/reference#Rvalue_references">右值引用</a>时，也引入了<a target="_blank" rel="noopener" href="https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers">万能引用</a>（Universal reference named by Scott Meyers，我自己更倾向于理解为“发生类型推导前夕的右值引用”）。这种情况下，类型推导过程遵循<a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/reference#Reference_collapsing">引用折叠</a>（Reference collapsing）的原则：</p>
+<ol>
+<li><p>如果 <code>expr</code> 为左值， <code>T</code> 和 <code>ParamType</code> 会被推导为左值引用（这是在模板类型推导中， <code>T</code> 被推导为引用类型的唯一情形）</p>
+</li>
+<li><p>如果 <code>expr</code> 为右值，则复用上面的第一种情况</p>
+</li>
+</ol>
+<p>例如：</p>
+<pre><code class="cpp">template &lt;typename T&gt;
+void f(T &amp;&amp;param);
+
+int x = 0x114;
+const int cx = x;
+const int &amp;rx = x;
+
+f(x);      // x     -&gt; lvalue =&gt; T -&gt; int&amp;,       ParamType -&gt; int&amp;
+f(cx);     // cx    -&gt; lvalue =&gt; T -&gt; const int&amp;, ParamType -&gt; const int&amp; &amp;&amp; -&gt; const int &amp;
+f(rx);     // rx    -&gt; lvalue =&gt; T -&gt; const int&amp;, ParamType -&gt; const int&amp; &amp;&amp; -&gt; const int &amp;
+f(0x514);  // 0x514 -&gt; rvalue =&gt; T -&gt; int,        ParamType -&gt; int&amp;&amp;
+</code></pre>
+<p><strong>三、 <code>ParamType</code> 既非指针也非引用</strong></p>
+<p>这种情况下，top-level <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/cv">CV 类型限定符</a>会被忽略，但注意 low-level 的 <code>constness</code> 将被保留。</p>
+<pre><code class="cpp">template&lt;typename T&gt;
+void f(T param);
+
+const char * const ptr = &quot;Hello world&quot;;
+f(ptr); // 修饰 ptr 本身的 const 被忽略，修饰 ptr 指向对象的 const 被保留
+        // 因此 T, ParamType 均被推导为 const char *
+</code></pre>
+<p>另外，数组和函数在 <code>ParamType</code> 为值类型时会分别退化成指针和函数指针，例如：</p>
+<pre><code class="cpp">template&lt;typename T&gt;
+void f(T param);
+
+template&lt;typename T&gt;
+void f_ref(T &amp;param);
+
+const char name[] = &quot;Hello world&quot;;
+f(name);     // ParamType -&gt; const char *
+f_ref(name); // ParamType -&gt; const char (&amp;)[12]
+
+void func(int);
+f(func);     // ParamType -&gt; void (*)(int)
+f_ref(func); // ParamType -&gt; void (&amp;)(int)
+</code></pre>
+<h3 id="auto-类型推导"><a href="#auto-类型推导" class="headerlink" title="auto 类型推导"></a><code>auto</code> 类型推导</h3><p><code>auto</code> 的类型推导与模板基本相同，唯一的差异在于它们对于 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/utility/initializer_list">std::initializer_list</a> 的类型推导逻辑不同。</p>
+<pre><code class="cpp">auto x = &#123; 0x11, 0x45, 0x14 &#125;; // x -&gt; std::initializer_list
+
+template&lt;typename T&gt;
+void f(T param);
+f(&#123; 0x11, 0x45, 0x14 &#125;); // Compile error，类型推导失败
+
+template&lt;typename T&gt;
+void f2(std::initializer_list&lt;T&gt; param);
+f2(&#123; 0x11, 0x45, 0x14 &#125;); // T -&gt; int, ParamType -&gt; std::initializer_list&lt;int&gt;
+
+auto create_list() &#123; // auto 在 C++14 中可用于说明函数返回值需要推导
+  return &#123;1, 2, 3&#125;; // Compile error，此时使用模板类型推导，而不是 auto 类型推导
+&#125;
+</code></pre>
+<p>除此之外，在 C++ 14 的某些场景， <code>auto</code> 关键字用于进行模板类型推导而不是 <code>auto</code> 类型推导（与其实现有关，比如此时 lambda 表达式会生成一个重载调用操作符的匿名模板类，因此用的是模板类型推导）</p>
+<pre><code class="cpp">// auto 在 C++14 中可用于说明函数返回值需要推导
+auto create_list() &#123;
+return &#123; 0x11, 0x45, 0x14 &#125;; // Compile error，此时使用模板类型推导，而不是 auto 类型推导
+&#125;
+
+// auto 在 C++14 中可用于形参推导
+std::vector&lt;int&gt; x;
+auto reset_x = [&amp;x](const auto&amp; v) &#123; x = v; &#125;
+reset_x(&#123; 0x11, 0x45, 0x14 &#125;); // Compile error
+</code></pre>
+<h3 id="decltype-类型推导"><a href="#decltype-类型推导" class="headerlink" title="decltype 类型推导"></a><code>decltype</code> 类型推导</h3><p><code>decltype</code> 进行的是一种很新的类型推导 —— 不推导，是的，只是原汁原味地返回变量的类型。</p>
+<p>不过需要注意的是，如果 <code>decltype</code> 应用于一个变量 <code>x</code> （类型为 <code>T</code> ）的复杂左值表达式（复杂只不止由 <code>x</code> 构成），将返回 <code>T&amp;</code> ，否则就返回 <code>T</code> ，所以会出现以下这种”量变产生质变“的现象：</p>
+<pre><code class="cpp">int x = 0;
+decltype(x)   // -&gt; int
+decltype((x)) // -&gt; int &amp;
+</code></pre>
+<p>下面是关于 <code>decltype</code> 的一些类型推导结果，可以上 <a target="_blank" rel="noopener" href="https://godbolt.org/z/5EK4o94cs">godbolt</a> 自己试试（包含以下代码片段）。</p>
+<pre><code class="cpp">class Clazz &#123;&#125;;
+
+Clazz c1;               // c1 -&gt; Clazz
+const Clazz &amp;c2 = c1;   // c2 -&gt; const Clazz &amp;
+auto c3 = c2;           // c3 -&gt; Clazz
+decltype(c2) c4 = c2;   // c4 -&gt; const Clazz &amp;
+decltype(auto) c5 = c2; // c5 -&gt; const Clazz &amp;
+
+// decltype(auto) 就是 decltype + auto ^_^
+// 好处是让 decltype 不再依赖形参了，很实用的一个特性
+</code></pre>
+<h3 id="一些有用的工具"><a href="#一些有用的工具" class="headerlink" title="一些有用的工具"></a>一些有用的工具</h3><p><strong>1. Boost.TypeIndex →</strong> 打印变量的完整类型（<a target="_blank" rel="noopener" href="https://godbolt.org/z/5EK4o94cs">godbolt</a>）</p>
+<pre><code class="cpp">#include &lt;boost/type_index.hpp&gt;
+
+using boost::typeindex::type_id_with_cvr;
+
+class Clazz &#123;&#125;;
+Clazz c1;
+
+cout &lt;&lt; &quot;c1 -&gt; &quot; &lt;&lt; type_id_with_cvr&lt;decltype(c1)&gt;().pretty_name() &lt;&lt; endl;
+</code></pre>
+<p><strong>2. <a target="_blank" rel="noopener" href="https://www.notion.so/C-11-14-546b3e79ca114dc79ced235d4f85f1eb">cdecl.org</a> → 用自然语言解释变量类型</strong></p>
+<p>所以前面突击检查的问题，答案在<a target="_blank" rel="noopener" href="https://cdecl.org/?q=char+const+*(*(*+const+bar)%5B5%5D)+(int)">这里</a>（你做对了吗 🤣）</p>
+<h2 id="右值引用、移动语义与完美转发"><a href="#右值引用、移动语义与完美转发" class="headerlink" title="右值引用、移动语义与完美转发"></a>右值引用、移动语义与完美转发</h2><blockquote>
+<p><code>template&lt;typename T&gt; void f(std::vector&lt;T&gt; &amp;&amp; param);</code> 中的 <code>&amp;&amp;</code> 是万能引用吗？</p>
+</blockquote>
+<h3 id="amp-amp-右值引用与万能引用"><a href="#amp-amp-右值引用与万能引用" class="headerlink" title="&amp;&amp; : 右值引用与万能引用"></a><code>&amp;&amp;</code> : 右值引用与万能引用</h3><ul>
+<li><p>在 C++11 中， <code>&amp;&amp;</code> 既可以表示右值引用，又能表示万能引用（如果你还不太清楚什么是左值/右值/纯右值，什么是右值引用/万能引用，可以参考<a target="_blank" rel="noopener" href="https://paul.pub/cpp-value-category/">这篇文章</a> ^_^）</p>
+</li>
+<li><p>右值引用用于延长临时（将亡）变量的生命周期，常用于移动构造、移动赋值等场景，避免冗余复制操作带来的性能损耗</p>
+</li>
+<li><p>值得益于 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/copy_elision">RVO</a>（返回值优化），很多情况下我们没有必要使用右值引用来优化代码，比如以下例子中， <code>GetClazz</code> 函数将在返回的地址上直接初始化，所以对局部变量 <code>c</code> 使用 move 是多余的，还会产生一次移动的多余开销</p>
+<pre><code class="cpp">struct Clazz &#123;&#125;;
+Clazz GetClazz() &#123;
+  Clazz c;
+  return std::move(c); // Bad
+  return c;            // Good, RVO
+&#125;
+int main() &#123;
+  Clazz &amp;&amp;c1 = GetClazz(); // Not necessary
+  Clazz c2 = GetClazz();   // Good
+&#125;
+</code></pre>
+</li>
+<li><p><code>&amp;&amp;</code> 表示万能引用的条件：具备 <code>T&amp;&amp;</code> 形式，且需要经过推导才能确定最终引用类型</p>
+<pre><code class="cpp">template&lt;typename T&gt;
+void f(T &amp;&amp;param); // 万能引用
+
+template&lt;typename T&gt;
+void f(std::vector&lt;T&gt; &amp;&amp; param); // 并非 T 本身需要推导，因为 &amp;&amp; 表示右值引用
+
+Clazz &amp;&amp;c1 = Clazz(); // 右值引用
+auto &amp;&amp;c2 = c1;       // 万能引用
+</code></pre>
+</li>
+<li><p>引用折叠</p>
+<ul>
+<li>左值引用短路右值引用</li>
+</ul>
+<pre><code class="cpp">// https://en.cppreference.com/w/cpp/language/reference#Reference_collapsing
+typedef int&amp;  lref;
+typedef int&amp;&amp; rref;
+int n;
+
+lref&amp;  r1 = n; // type of r1 is int&amp;
+lref&amp;&amp; r2 = n; // type of r2 is int&amp;
+rref&amp;  r3 = n; // type of r3 is int&amp;
+rref&amp;&amp; r4 = 1; // type of r4 is int&amp;&amp;
+</code></pre>
+<ul>
+<li>引用折叠发生的四种场景<ul>
+<li>模板实例化</li>
+<li><code>auto</code> 变量的类型推导</li>
+<li>生成和使用 <code>typedef</code> / <code>using</code> 声明</li>
+<li><code>decltype</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="std-move-与-std-forward"><a href="#std-move-与-std-forward" class="headerlink" title="std::move 与 std::forward"></a><code>std::move</code> 与 <code>std::forward</code></h3><p><code>std::move</code> 不进行任何移动， <code>std::forward</code> 也不进行任何转发，两者在运行期都不发挥作用，只是进行强制类型转换，以下是两者的简单实现。</p>
+<pre><code class="cpp">// std::move
+template&lt;typename T&gt;
+remove_reference_t&lt;T&gt;&amp;&amp; move(T &amp;&amp;t) &#123;
+  return static_cast&lt;remove_reference_t&lt;T&gt;&amp;&amp;&gt;(t);
+&#125;
+
+// std::forward
+template&lt;typename T&gt;
+T&amp;&amp; forward&lt;remove_reference_t&lt;T&gt; &amp;t) &#123;
+  return static_cast&lt;T&amp;&amp;&gt;(t);
+&#125;
+
+template&lt;typename T&gt;
+T&amp;&amp; forward&lt;remove_reference_t&lt;T&gt; &amp;&amp;t) &#123;
+  return static_cast&lt;T&amp;&amp;&gt;(t);
+&#125;
+</code></pre>
+<p>完美转发失效的场景</p>
+<ul>
+<li><p>大括号初始化<br>由于形参未声明为 <code>std::initializer_list</code> ，编译器会被禁止在 <code>fwd</code> 的调用过程中从表达式 <code>&#123;1, 2, 3&#125;</code> 出发来推导类型，所以编译器拒绝这个调用</p>
+<pre><code class="cpp">// https://godbolt.org/z/d45Wr54Ya
+void f(const std::vector&lt;int&gt; &amp;v) &#123;&#125;
+template&lt;typename T&gt;
+void fwd(T &amp;&amp;param) &#123;
+  f(std::forward&lt;T&gt;(param));
+&#125;
+
+template&lt;typename... Ts&gt;
+void fwd(Ts&amp;&amp;... params) &#123;
+  f(std::forward&lt;Ts&gt;(params)...);
+&#125;
+
+int main() &#123;
+    fwd(&#123;1, 2, 3&#125;); // Compile error
+    // note: candidate template ignored: couldn&#39;t infer template argument &#39;T&#39;
+    // note: candidate template ignored: substitution failure:
+    //   deduced incomplete pack &lt;(no value)&gt; for template parameter &#39;Ts&#39;
+    auto list = &#123;1, 2, 3&#125;; // list -&gt; std::initializer_list
+    fwd(list); // OK
+&#125;
+</code></pre>
+</li>
+<li><p>仅有声明的整型 static const 成员变量<br>编译器会对类中的整型 static const 成员变量做优化，将其编译成编译期常量，进而避免为这些成员变量分配内存；在这种情况下，对这些成员变量实施取址操作就会产生链接期间失败，解决办法是给 <code>Clazz::kConstMember</code> 提供显式定义（只需要在类声明外边提供定义即可： <code>const std::size_t Clazz::kConstMember;</code> ）</p>
+<pre><code class="cpp">// https://godbolt.org/z/3bqoeWsT6
+class Clazz &#123;
+ public:
+  static const std::size_t kConstMember = 0x114514;
+&#125;;
+
+std::vector&lt;int&gt; data;
+data.reserve(Clazz::kConstMember); // 无法取值
+
+// 同样地，将 Clazz::kConstMember 传入 fwd，也会因为无法取址而产生链接期失败
+fwd(Clazz::kConstMember); // undefined reference to `Clazz::kConstMember&#39;
+</code></pre>
+</li>
+<li><p>重载的函数名称和模板名称<br>函数模板没有关于类型需求的信息，因为编译器不能决议需要传递哪个函数的重载版本（跟场景一有点相似）</p>
+<pre><code class="cpp">void f(int (*pf)(int));
+void f(int pf(int));
+
+int process_val(int value);
+int process_val(int value, int priority);
+
+f(process_val); // OK
+fwd(process_val); // Compiler error
+</code></pre>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/bit_field">位域</a><br>由于位域不能对其直接取值，而函数模板的形参是个引用，因此位域不能作为其实参（但可以先将位域转换为其他类型再调用函数模板）</p>
+</li>
+</ul>
+<h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>智能指针是 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/raii">RAII</a> (Resource Aequisition Is Initialization) 在内存资源管理上的体现，相比裸指针需要手动管理内存的获取和释放，更加安全和易用。</p>
+<h3 id="auto-ptr"><a href="#auto-ptr" class="headerlink" title="auto_ptr"></a><code>auto_ptr</code></h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/memory/auto_ptr"><code>auto_ptr</code></a> 是 C++98 残留下来的弃用特性，是对智能指针进行标准化的尝试，由于历史原因， <code>auto_ptr</code> 使用复制操作来移动对象，导致了一些语义上的缺陷（比如对 <code>auto_ptr</code> 执行复制操作会将其值置空），后来被 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/memory/unique_ptr"><code>unique_ptr</code></a> 代替。</p>
+<h3 id="unique-ptr"><a href="#unique-ptr" class="headerlink" title="unique_ptr"></a><code>unique_ptr</code></h3><ul>
+<li><p><code>unique_ptr</code> 相比裸指针在默认情况下大小相同，性能相比 <code>shared_ptr</code> 更好，应该优先考虑选择 <code>unique_ptr</code> 来管理内存</p>
+</li>
+<li><p><code>unique_ptr</code> 是典型的只可移动的对象，移动一个 <code>unique_ptr</code> 将会发生内存所有权（实际上就是其持有的裸指针）的转移</p>
+</li>
+<li><p><code>unique_ptr</code> 的一个常见用法是作为工厂函数的返回类型</p>
+<pre><code class="cpp">class Animal &#123;&#125;;
+class Dog : public Animal &#123;&#125;;
+class Cat : public Animal &#123;&#125;;
+class Pig : public Animal &#123;&#125;;
+
+unique_ptr&lt;Animal&gt; produce_animal(...) &#123;
+  if (...) &#123;
+    return make_unique&lt;Dog&gt;(...);
+  &#125;
+  if (...) &#123;
+    return make_unique&lt;Cat&gt;(...);
+  &#125;
+  // ...
+&#125;
+</code></pre>
+</li>
+<li><p><code>unique_ptr</code> 共分为两种形式， <code>unique_ptr&lt;T&gt;</code> 和 <code>unique_ptr&lt;T[]&gt;</code> ；前者不提供索引运算符 <code>[]</code> ，后者不提供 <code>*</code> 和 <code>-&gt;</code></p>
+</li>
+<li><p><code>unique_ptr</code> 还可以传入一个自定义的析构器 <code>unique_ptr&lt;class T, class Deleter&gt;</code> ，但一般不需要用到（传入自定义析构器之后， <code>unique_ptr</code> 类的大小就需要加上自定义析构器的大小了</p>
+</li>
+<li><p><code>unique_ptr</code> 的一个简单实现</p>
+<pre><code class="cpp">template&lt;typename T&gt;
+class my_unique_ptr &#123;
+ public:
+  my_unique_ptr() : ptr(nullptr) &#123;&#125;
+  my_unique_ptr(T *ptr) : ptr(ptr) &#123;&#125;
+  ~my_unique_ptr() &#123;
+    __cleanup__();
+  &#125;
+
+  // copying is not permitted
+  my_unique_ptr(const my_unique_ptr &amp;ptr) = delete;
+  my_unique_ptr &amp;operator=(const my_unique_ptr &amp;ptr) = delete;
+
+  my_unique_ptr(my_unique_ptr &amp;&amp;another) &#123;
+    ptr = another.ptr;
+    another.ptr = nullptr;
+  &#125;
+  my_unique_ptr &amp;operator=(my_unique_ptr &amp;&amp;another) &#123;
+    __cleanup__();
+    ptr = another.ptr;
+    another.ptr = nullptr;
+  &#125;
+
+  // dereferencing
+  T *operator-&gt;() const &#123;
+    return ptr;
+  &#125;
+
+  // dereferencing
+  T &amp;operator*() const &#123;
+    return *ptr;
+  &#125;
+
+ private:
+  void __cleanup__() &#123;
+    if (ptr != nullptr) &#123;
+      delete ptr;
+    &#125;
+  &#125;
+
+  T *ptr;
+&#125;;
+</code></pre>
+</li>
+</ul>
+<h3 id="shared-ptr"><a href="#shared-ptr" class="headerlink" title="shared_ptr"></a><code>shared_ptr</code></h3><ul>
+<li><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/memory/shared_ptr"><code>shared_ptr</code></a> 用于多个指针需要共同管理一个内存对象的情形（使用的时候，考虑一下自己是否真的处于这种情况）</p>
+</li>
+<li><p><code>shared_ptr</code> 的原理是引用计数 + 共享内存</p>
+</li>
+<li><p>除了持有裸指针外，还通过一个控制块来管理引用计数等信息（还有弱计数、自定义 Deleter 等，但一般情况下知道有个引用计数也就够啦）</p>
+</li>
+<li><p>指涉到同一内存对象的 <code>shared_ptr</code> 共享控制块信息；因此，<strong>引用计数的递增和递减必须是原子操作</strong></p>
+</li>
+<li><p>当最后一个持有某对象的 <code>shared_ptr</code> 不再持有它时（引用计数为 0，例如 <code>shared_ptr</code> 被析构、或 reset 为另一个对象）， <code>shared_ptr</code> 会析构该对象</p>
+</li>
+<li><p><code>shared_ptr</code> 也支持指定自定义析构器，但并不作为 <code>shared_ptr</code> 类型的一部分 <code>shared_ptr&lt;Clazz&gt; sp(new Clazz, custom_deleter);</code> （这一点与 <code>unique_ptr</code> 不太一样）</p>
+</li>
+<li><p>以下情况构造 <code>shared_ptr</code> 会创建一个控制块</p>
+</li>
+<li><p>调用 <code>make_shared</code> 时</p>
+</li>
+<li><p>从 <code>unique_ptr</code> / <code>auto_ptr</code> / 裸指针出发构造一个 <code>shared_ptr</code> 时</p>
+</li>
+<li><p>避免从同一个裸指针出发构造多个 <code>shared_ptr</code></p>
+</li>
+<li><p><code>shared_ptr</code> 的一个简单实现</p>
+</li>
+</ul>
+<pre><code class="cpp">typedef unsigned int uint;
+template&lt;typename T&gt;
+class my_shared_ptr &#123;
+ public:
+  my_shared_ptr() : ptr(nullptr), ref_count(new uint(0)) &#123;&#125;
+  my_shared_ptr(T *ptr) : ptr(ptr), ref_count(new uint(1)) &#123;&#125;
+  ~my_shared_ptr() &#123;
+    __cleanup__();
+  &#125;
+
+  my_shared_ptr(const my_shared_ptr &amp;another) &#123;
+    ptr = another.ptr;
+    ref_count = another.ref_count;
+    if (another.ptr != nullptr) &#123;
+      (*ref_count)++;
+    &#125;
+  &#125;
+  my_shared_ptr &amp;operator=(const my_shared_ptr &amp;another) &#123;
+    __cleanup__();
+    ptr = another.ptr;
+    ref_count = another.ref_count;
+    if (another.ptr != nullptr) &#123;
+      (*ref_count)++;
+    &#125;
+  &#125;
+
+  my_shared_ptr(my_shared_ptr &amp;&amp;another) &#123;
+    ptr = another.ptr;
+    ref_count = another.ref_count;
+    another.ref_count = nullptr;
+    another.ptr = nullptr;
+  &#125;
+  my_shared_ptr &amp;operator=(my_shared_ptr &amp;&amp;another) &#123;
+    __cleanup__();
+    ptr = another.ptr;
+    ref_count = another.ref_count;
+    another.ref_count = nullptr;
+    another.ptr = nullptr;
+  &#125;
+
+  T *operator-&gt;() const &#123;
+    return ptr;
+  &#125;
+
+  T &amp;operator*() const &#123;
+    return *ptr;
+  &#125;
+
+  uint get_count() const &#123;
+    return *ref_count;
+  &#125;
+
+  T *get() const &#123;
+    return ptr;
+  &#125;
+
+ private:
+  void __cleanup__() &#123;
+    (*ref_count)--;
+    if (*ref_count == 0) &#123;
+      if (ptr != nullptr) &#123;
+        delete ptr;
+      &#125;
+      delete ref_count;
+    &#125;
+  &#125;
+
+  T *ptr = nullptr;
+
+  // `ref_count` should be pointer pointing to heap memory,
+  // to share reference count between different `shared_ptr` objects
+  uint *ref_count = nullptr;
+&#125;;
+</code></pre>
+<h3 id="weak-ptr"><a href="#weak-ptr" class="headerlink" title="weak_ptr"></a><code>weak_ptr</code></h3><ul>
+<li><p>引用计数的缺点是，对于循环引用，需要引入一个第三者来破局， <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/memory/weak_ptr"><code>weak_ptr</code></a> 它来了</p>
+</li>
+<li><p><code>weak_ptr</code> 一般通过 <code>shared_ptr</code> 创建，但不影响持有该对象的引用计数（不过会影响弱引用计数）</p>
+<pre><code class="cpp">// https://godbolt.org/z/9scTG96ss
+auto sp = std::make_shared&lt;Clazz&gt;();  // ref_count = 1
+std::weak_ptr&lt;Clazz&gt; wp(sp);          // ref_count = 1
+sp = nullptr;  // ref_count = 0, `wp` is dangling
+assert(wp.expired());  // pass
+</code></pre>
+</li>
+<li><p><code>weak_ptr</code> 没有取址操作，因此如果需要取出其指向的对象，需要先通过 <code>std::weak_ptr::lock</code> 转换为 <code>shared_ptr</code></p>
+<pre><code class="cpp">std::shared_ptr&lt;Clazz&gt; sp1 = wp.lock(); // 若 wp 失效，则返回空
+std::shared_ptr&lt;Clazz&gt; sp2(wp); // 若 wp 失效，则抛出 std::bad_weak_ptr 异常
+</code></pre>
+</li>
+<li><p><code>weak_ptr</code> 一般用于判断缓存失效、观察者模式、解除循环引用等场景</p>
+</li>
+</ul>
+<h3 id="优先使用-make-unique-和-make-shared"><a href="#优先使用-make-unique-和-make-shared" class="headerlink" title="优先使用 make_unique 和 make_shared"></a>优先使用 <code>make_unique</code> 和 <code>make_shared</code></h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/memory/shared_ptr/make_shared"><code>make_shared</code></a> 在 C++11 引入标准库，但 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique"><code>make_unique</code></a> 在 C++14 才引入。</p>
+<p>使用 <code>make_unique</code> / <code>make_shared</code> 的优势</p>
+<ul>
+<li><p>性能更好（经典的两次内存分配问题）</p>
+<pre><code class="cpp">std::shared_ptr&lt;Clazz&gt; sp1(new Clazz);
+// 两次内存分配
+// 1. 为 Clazz 进行一个内存分配
+// 2. 为 shared_ptr 的控制块进行一次内存分配
+auto sp2 = std::make_shared&lt;Clazz&gt;();
+// 一次内存分配
+// make_shared 会分配单块（single_chunck）内存，
+// 既保存 Clazz 对象又保存控制块对象
+</code></pre>
+</li>
+<li><p>可以避免代码异常引起的内存泄露</p>
+<pre><code class="cpp">process_object(std::shared_ptr&lt;Clazz&gt;(new Clazz), do_stuff_in_danger());
+// 考虑以下的事件发生顺序
+// 1. new Clazz, 在堆上创建 Clazz 对象
+// 2. 执行 do_stuff_in_danger
+// 3. 执行 std::shared_ptr 构造函数
+// 其中，do_stuff_in_danger 可能在运行期产生异常，这时候就会造成
+// 第一步动态分配的 Clazz 内存泄露
+</code></pre>
+</li>
+<li><p>使用 make 系列函数可以让代码更简洁</p>
+<pre><code class="cpp">auto up1(std::make_unique&lt;Clazz&gt;());   // Good
+std::unique_ptr&lt;Clazz&gt; up2(new Clazz); // 需要写两次 Clazz 类型
+</code></pre>
+</li>
+</ul>
+<p>使用 <code>make_unique</code> / <code>make_shared</code> 的劣势</p>
+<ul>
+<li><p>不支持自定义析构器</p>
+</li>
+<li><p>make 系列函数对形参进行完美转发的代码使用的是小括号初始化，因此在使用 initializer_list 初始化的场景可能不行</p>
+</li>
+<li><p><code>make_shared</code> 创建的单块内存把指向的内存对象和控制块绑定起来了，因此如果还有 <code>weak_ptr</code> 指向该对象，由于控制块还需要存在，因此指向的对象内存此时也没法释放了</p>
+</li>
+</ul>
+<h2 id="Lambda-表达式"><a href="#Lambda-表达式" class="headerlink" title="Lambda 表达式"></a>Lambda 表达式</h2><pre><code class="cpp">// https://godbolt.org/z/KE1a9M9Yx
+auto a = []()&#123;&#125;;
+auto b = []()&#123;&#125;;
+// a 和 b 是同个类型吗？
+
+function&lt;void()&gt; x = a;
+function&lt;void()&gt; y = b;
+// x 和 y 是同个类型吗？
+</code></pre>
+<p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/lambda">Lambda 表达式</a>是 C++11 引入的用于构造<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Closure_(computer_programming)">闭包</a>对象（即能够捕获上下文中变量的匿名函数对象）的方法，常用于 <code>std::find_if</code> 等需要传入特定比较器的场景。</p>
+<h3 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h3><p>Lambda 表达式的基本实现原理是可调用匿名类（所以前面问题的答案就不言自明了），以下写了一个简单的支持 auto 形参（C++14 开始支持）的 Lambda 实现。</p>
+<pre><code class="cpp">// https://godbolt.org/z/EMKMPcTTf
+
+class Lambda_0x8023 &#123;
+ public:
+  Lambda_0x8023(int a, string &amp;b): capture_a_(a), capture_b_(b)&#123;&#125;
+
+  // Lambda 表达式的调用操作符是 const 函数，不能修改值捕获的对象
+  // C++14 后 constexpr 成员函数本身是 const 成员函数，不需要加 const
+  template&lt;typename T&gt;
+  constexpr auto operator()(T param) const &#123;
+    // capture_a_ = 0x1; // Compile error
+    capture_b_ = &quot;Modified test lambda: &quot;; // OK
+    cout &lt;&lt; capture_b_ &lt;&lt; param &lt;&lt; endl;
+  &#125;
+
+ private:
+  int capture_a_; // 值捕获
+  string &amp;capture_b_; // 引用捕获
+&#125;;
+
+int main() &#123;
+  int a = 0x0;
+  string b = &quot;Test lambda: &quot;;
+  // Lambda 的 auto 参数通过匿名类的模版方法来实现
+  auto lambda_1 = [a, &amp;b](auto x) &#123; cout &lt;&lt; b &lt;&lt; x &lt;&lt; endl; &#125;;
+  lambda_1(0x114);
+  lambda_1(&quot;C++ Lambda test&quot;);
+
+  // 假装 Lambda_0x8023 是以上 Lambda 表达式生成的匿名类
+  auto lambda_2 = Lambda_0x8023(a, b);
+  lambda_2(0x514);
+  lambda_2(&quot;Lambda simple implementation test&quot;);
+&#125;
+</code></pre>
+<h3 id="变量捕获"><a href="#变量捕获" class="headerlink" title="变量捕获"></a>变量捕获</h3><ul>
+<li><p>按引用捕获需要注意悬垂引用（Dangling references），一旦 Lambda 创建的闭包越过了按引用捕获的变量的声明周期，就会导致引用空悬</p>
+<pre><code class="cpp">// https://godbolt.org/z/3ej7f33Kb
+void add_filter(vector&lt;function&lt;bool(int)&gt;&gt; &amp;filters) &#123;
+  int benchmark = 0x114;
+  filters.emplace_back([&amp;](int val) &#123;
+    cout &lt;&lt; &quot;benchmark: &quot; &lt;&lt; benchmark &lt;&lt; endl;
+    return val == benchmark;
+  &#125;);
+  // 离开当前函数后，栈变量将被弹出，此时 &amp;benchmark 处的值未定义
+&#125;
+int main() &#123;
+  vector&lt;function&lt;bool(int)&gt;&gt; filters;
+  add_filter(filters);
+  auto f = filters[0];
+  cout &lt;&lt; f(0x114) &lt;&lt; endl; // false
+&#125;
+</code></pre>
+</li>
+<li><p>捕获只能针对在创建 Lambda 表达式的作用域内可见的非静态局部变量（包括形参）</p>
+</li>
+<li><p>C++14 开始支持广义 Lambda 捕获（支持初始化捕获），就可以开始使用移动构造捕获之类的狠活了（比如把 <code>unique_ptr</code> 捕获进来）<br><code>auto func = [pw = std::move(pw)] &#123; return pw-&gt;validated(); &#125;;</code> ，</p>
+</li>
+</ul>
+<h3 id="Lambda-vs-std-bind"><a href="#Lambda-vs-std-bind" class="headerlink" title="Lambda vs. std::bind"></a><code>Lambda</code> vs. <code>std::bind</code></h3><p>**优先选择 Lambda 表达式，而不是 <code>std::bind</code> **</p>
+<ul>
+<li><p>Lambda 表达式可读性更好</p>
+</li>
+<li><p>入参 eval 的时机更明确</p>
+</li>
+<li><p>支持函数重载</p>
+</li>
+<li><p>对函数内联更友好（ <code>std::bind</code> 通过函数指针调用，编译器趋向于不内联通过函数指针发起的函数调用）</p>
+</li>
+<li><p><code>std::bind</code> 函数参数传递类型不明显</p>
+</li>
+<li><p>对于”捕获“的变量， <code>std::bind</code> 默认是按值存储的，如果需要按引用存储，则需要使用 <code>std::ref()</code> 函数</p>
+</li>
+<li><p><code>std::bind</code> 返回的结果对象，形参（placeholders）是通过引用传递的</p>
+</li>
+</ul>
+<pre><code class="cpp">using namespace std::chrono;
+using namespace std::literals;
+using Time = steady_clock::time_point;
+using Duration = steady_clock::duration;
+enum class Sound &#123; Beep, Siren, Whistle &#125;;
+
+void set_alarm(Time t, Sound s, Duration d);
+
+// 假设我们需要构造一个函数，实现在一小时之后发出警报，并持续 30s
+
+// 使用 Lambda 实现，能够突出我们调用 set_alarm 实现此功能
+auto set_sound_lambda = [](Sound s) &#123;
+  set_alarm(steady_clock::now() + 1h, s, 30s);
+&#125;
+
+// 使用 std::bind 实现
+auto set_sound_bind_wrong = std::bind(
+  set_alarm,
+  steady_clock::now() + 1h, // 这里实际上语义错了，因为实参会在 bind 的时候 eval
+  placeholders::_1,         // 而不是在调用时 eval
+  30s
+);
+
+auto set_sound_bind_correct = std::bind(
+  set_alarm,
+  std::bind(std::plus&lt;steady_clock::time_point&gt;(), steady_clock::now(), 1h),
+  placeholders::_1,
+  30s
+);
+
+void set_alarm(Time t, Sound s, Duration d, Volume v);
+// 发生函数重载，此时 std::bind 的调用无法编译（bind 拿到的信息只有函数名称）
+</code></pre>
+<p><a target="_blank" rel="noopener" href="https://abseil.io/tips/108">abseil 提供了 <code>bind_front</code> 函数</a>，相比 <code>std::bind</code> 在多数情况下更易用。</p>
+<h2 id="实践杂谈"><a href="#实践杂谈" class="headerlink" title="实践杂谈"></a>实践杂谈</h2><h3 id="初始化方法的选择"><a href="#初始化方法的选择" class="headerlink" title="初始化方法的选择"></a>初始化方法的选择</h3><p>C++ 11 引入了统一初始化（ <code>&#123;&#125;</code> 初始化），至此，各种初始化方法整体比较如下图所示：</p>
+<p><img src="https://km.woa.com/asset/59dc011e71924195bed238ac9691abde?height=1316&width=1966" alt="initialization.png"></p>
+<p>（图源 <a target="_blank" rel="noopener" href="http://josuttis.com/cpp/c++initialization.pdf">http://josuttis.com/cpp/c++initialization.pdf</a> ）</p>
+<p>统一初始化的优势主要有：</p>
+<ul>
+<li><p>相比其他初始化方式适用范围更广</p>
+</li>
+<li><p>复制初始化不能用于 <code>atomic</code> 等不可复制的对象</p>
+</li>
+<li><p><code>()</code> 初始化有时候会不可用，例如 <code>Clazz c();</code> 声明的是函数 <code>Clazz ()</code> 而不是 <code>Clazz</code> 变量</p>
+</li>
+<li><p>禁止 built-in 类型之间进行 narrowing conversion，还是能避免一些隐藏的类型转换问题的</p>
+</li>
+</ul>
+<p>不过，当统一初始化遇到 <code>std::initializer_list</code> 时，编译器会尽可能匹配形参为 <code>std::initializer_list</code> 的函数重载版本，例如：</p>
+<pre><code class="cpp">std::vector&lt;int&gt; v1(10, 20); // 创建一个包含 10 个元素的 vector，每个元素都是 20
+std::vector&lt;int&gt; v2&#123;10, 20&#125;; // 创建一个包含 2 个元素的 vector，分别为 10 和 20
+</code></pre>
+<p>这里比较推荐 <a target="_blank" rel="noopener" href="https://abseil.io/tips/88">abseil 关于初始化的实践</a>：</p>
+<ul>
+<li><p>对于初始化过程仅涉及简单的类型定义或复制的场景（例如字面量初始化、复制初始化等），使用 <code>=</code> 初始化</p>
+<pre><code class="cpp">int x = 2;
+std::string foo = &quot;Hello World&quot;;
+std::vector&lt;int&gt; v = &#123;1, 2, 3&#125;;
+std::unique_ptr&lt;Matrix&gt; matrix = NewMatrix(rows, cols);
+MyStruct x = &#123;true, 5.0&#125;;
+MyProto copied_proto = original_proto;
+</code></pre>
+</li>
+<li><p>对于初始化过程涉及构造逻辑的场景，使用 <code>()</code> 初始化</p>
+<pre><code class="cpp">Frobber frobber(size, &amp;bazzer_to_duplicate);
+std::vector&lt;double&gt; fifty_pies(50, 3.14);
+</code></pre>
+</li>
+<li><p>当以上两种方法无法编译时，才使用 <code>&#123;&#125;</code> 初始化</p>
+</li>
+</ul>
+<h3 id="优先使用-nullptr-，而不是-0-或-NULL"><a href="#优先使用-nullptr-，而不是-0-或-NULL" class="headerlink" title="优先使用 nullptr ，而不是 0 或 NULL"></a>优先使用 <code>nullptr</code> ，而不是 0 或 <code>NULL</code></h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/nullptr"><code>nullptr</code></a> 是 C++11 引入的纯右值，其类型为 <code>nullptr_t</code> ，可以隐式转换为任何指针类型。</p>
+<p>因此，相比 0 和 <code>NULL</code> ， <code>nullptr_t</code> 可以避免调用到接受其他类型形参的函数重载版本。</p>
+<pre><code class="cpp">void f(int);
+void f(bool);
+void f(void*);
+
+f(0);       // 调用 f(int)
+f(NULL);    // 在大部分编译器下编译失败
+f(nullptr); // 调用 f(void*)
+</code></pre>
+<h3 id="优先使用-using-，而不是-typedef"><a href="#优先使用-using-，而不是-typedef" class="headerlink" title="优先使用 using ，而不是 typedef"></a>优先使用 <code>using</code> ，而不是 <code>typedef</code></h3><ol>
+<li><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/type_alias"><code>using</code></a> 可读性更好</li>
+</ol>
+<pre><code class="cpp">typedef void (*FP)(int, const std::string&amp;);
+using FP = void (*)(int, const std::string&amp;);
+</code></pre>
+<ol start="2">
+<li><code>using</code> 支持模板化，但 <code>typedef</code> 不支持</li>
+</ol>
+<pre><code class="cpp">template&lt;class T&gt;
+struct Alloc &#123;&#125;;
+template&lt;class T&gt;
+using Vec = vector&lt;T, Alloc&lt;T&gt;&gt;; // type-id is vector&lt;T, Alloc&lt;T&gt;&gt;
+Vec&lt;int&gt; v; // Vec&lt;int&gt; is the same as vector&lt;int, Alloc&lt;int&gt;&gt;
+</code></pre>
+<ol start="3">
+<li> <code>using</code> 模板可以避免 <code>::type</code> 后缀，同时也不需要考虑模板内带依赖类型的 <code>typename</code> 前缀；C++14 正是在 type traits 中引入了 <code>using</code> ，使其语法友好了很多</li>
+</ol>
+<pre><code class="cpp">std::remove_const&lt;T&gt;::type // C++11
+std::remove_const_t&lt;T&gt;     // C++14
+</code></pre>
+<h3 id="优先使用-enum-class-，而不是-enum"><a href="#优先使用-enum-class-，而不是-enum" class="headerlink" title="优先使用 enum class ，而不是 enum"></a>优先使用 <code>enum class</code> ，而不是 <code>enum</code></h3><ol>
+<li> <code>enum class</code> 可以避免 <code>enum</code> 带来的命名空间污染</li>
+</ol>
+<pre><code class="cpp">enum Color &#123; red, green, blue &#125;;
+auto red = false; // Compile error，enum Color 污染了当前的命名空间
+
+enum class Color &#123; red, green, blue &#125;;
+Color c1 = red;        // Compile error
+Color c2 = Color::red; // OK
+auto  c3 = Color::red; // OK
+</code></pre>
+<ol start="2">
+<li> <code>enum class</code> 不能隐式转换为其他类型</li>
+</ol>
+<pre><code class="cpp">enum Color &#123; red, green, blue &#125;;
+Color c = red;
+if (c &lt; 11.4); // OK
+
+enum class Color &#123; red, green, blue &#125;;
+Color c = Color::red;
+if (c &lt; 11.4) &#123;&#125; // Compile error
+</code></pre>
+<ol start="3">
+<li><code>enum class</code> 的默认底层类型是 <code>int</code> ，而 <code>enum</code> 没有默认底层类型（节省空间）<br> 这意味 <code>enum</code> 仅在指定底层类型的情况下才可以进行前置声明；同时默认情况下，若 <code>enum</code> 的定义发生扩充（例如新增了一个枚举）， <code>enum</code> 的底层类型就可能会改变，依赖到 <code>enum</code> 的编译单元都需要重新编译了</li>
+</ol>
+<h3 id="为需要改写的函数都显式添加-override-声明"><a href="#为需要改写的函数都显式添加-override-声明" class="headerlink" title="为需要改写的函数都显式添加 override 声明"></a>为需要改写的函数都显式添加 <code>override</code> 声明</h3><p>发生函数重载是需要一些条件的：</p>
+<ul>
+<li><p>函数名称相同</p>
+</li>
+<li><p>形参类型相同</p>
+</li>
+<li><p>常量性相同</p>
+</li>
+<li><p>返回值和异常类型可兼容</p>
+</li>
+<li><p>函数引用限定符（C++11，用于限制函数仅用于左值或右值）相同</p>
+</li>
+</ul>
+<p>在编写重写的函数时，可能会因为某些条件没有满足导致没有真正重写（有可能发生 function shadowing），这时候加上 <code>override</code> 就能让编译器产生错误信息了。</p>
+<h3 id="优先使用-const-iterator-，而不是-iterator"><a href="#优先使用-const-iterator-，而不是-iterator" class="headerlink" title="优先使用 const_iterator ，而不是 iterator"></a>优先使用 <code>const_iterator</code> ，而不是 <code>iterator</code></h3><p><code>const_iterator</code> 和 <code>iterator</code> 本质上都是 <code>normal_iterator</code> 的 alias，区别在于 <code>_Iterator</code> 类型的不同（ <code>pointer</code> 和 <code>const_pointer</code> ）</p>
+<pre><code class="cpp">// libstdc++: stl_vector.h
+// https://gcc.gnu.org/onlinedocs/gcc-4.8.2/libstdc++/api/a01570_source.html
+
+227: typedef __gnu_cxx::__normal_iterator&lt;pointer, vector&gt; iterator;
+228: typedef __gnu_cxx::__normal_iterator&lt;const_pointer, vector&gt; const_iterator;
+
+// libstdc++: stl_iterator.h
+// https://gcc.gnu.org/onlinedocs/gcc-6.3.0/libstdc++/api/a01623_source.html
+756: template&lt;typename _Iterator, typename _Container&gt;
+757:    class __normal_iterator
+758:    &#123;
+759:     protected:
+760:      _Iterator _M_current;
+761:
+762:      typedef iterator_traits&lt;_Iterator&gt; __traits_type;
+</code></pre>
+<p><code>const_iterator</code> 不能用于修改容器元素，因此，在不需要通过迭代器修改变量的情况下，尽量使用 <code>const</code> 版本的迭代器相关的成员函数（例如 <code>cbegin()</code> 、 <code>cend()</code> ）。</p>
+<p>不过，在容器本身就使用 <code>const</code> 修饰的情况下，调用其普通版本的迭代器相关函数（例如 <code>begin()</code> ）也会返回 <code>const_iterator</code> ，具体情况如下所示：</p>
+<pre><code class="cpp">// https://godbolt.org/z/jj5e77T3Y
+
+vector&lt;int&gt; v;
+const vector&lt;int&gt; cv = v;
+
+v.begin();   // type: __gnu_cxx::__normal_iterator&lt;int*, std::vector&lt;int, std::allocator&lt;int&gt; &gt; &gt;
+v.cbegin();  // type: __gnu_cxx::__normal_iterator&lt;int const*, std::vector&lt;int, std::allocator&lt;int&gt; &gt; &gt;
+cv.begin();  // type: __gnu_cxx::__normal_iterator&lt;int const*, std::vector&lt;int, std::allocator&lt;int&gt; &gt; &gt;
+cv.cbegin(); // type: __gnu_cxx::__normal_iterator&lt;int const*, std::vector&lt;int, std::allocator&lt;int&gt; &gt; &gt;
+
+int target = 0; // Readonly find
+const auto it1 = find(v.begin(), v.end(), target);     // Bad
+const auto it2 = find(v.cbegin(), v.cend(), target);   // Good
+const auto it3 = find(cv.begin(), cv.end(), target);   // Acceptable
+const auto it4 = find(cv.cbegin(), cv.cend(), target); // Good
+</code></pre>
+<p>因此，</p>
+<ul>
+<li><p>对于非 <code>const</code> 容器变量，在不通过迭代器修改变量的情况下，使用 <code>const</code> 版本的迭代器相关成员函数</p>
+</li>
+<li><p>对于 <code>const</code> 容器变量，则都可以接受，但还是尽量使用 <code>const</code> 的版本（因为容器的 constness 可能会在后续的代码改动中发生变化）</p>
+</li>
+</ul>
+<h3 id="确定函数不会异常后，可以加上-noexcept-声明"><a href="#确定函数不会异常后，可以加上-noexcept-声明" class="headerlink" title="确定函数不会异常后，可以加上 noexcept 声明"></a>确定函数不会异常后，可以加上 <code>noexcept</code> 声明</h3><ol>
+<li><p>加上 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/noexcept_spec"><code>noexcept</code></a> 声明有利于函数编译器更好地优化代码</p>
+</li>
+<li><p>编写类的移动构造函数时，加上 <code>noexcept</code> 声明可以在其作为 <code>vector</code> 等容器的元素时，在容器发生 resize 的情况下，将元素的复制操作替换成低成本的移动操作</p>
+</li>
+<li><p>大部分函数是异常中立的，函数本身不抛出异常，但其调用的函数不保证不产生异常（在我们的业务代码中，涉及 RPC 调用的代码基本都属于这种情况，可能只有少部分工具类代码可保证不产生异常）</p>
+</li>
+</ol>
+<h3 id="优先使用-constexpr-，而不是-const"><a href="#优先使用-constexpr-，而不是-const" class="headerlink" title="优先使用 constexpr ，而不是 const"></a>优先使用 <code>constexpr</code> ，而不是 <code>const</code></h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/constexpr"><code>constexpr</code></a> 是 C++11 引入的编译期常量表达式的修饰符，相比而言 <code>const</code> 则仅保证某个变量在运行时保持不变。具备编译期可知的特性之后，用 <code>constexpr</code> 修饰的变量就可以用于标识数组大小、switch case label 等场景了。</p>
+<pre><code class="cpp">// https://godbolt.org/z/fWEn4Kcfb
+
+// constexpr 用于函数时，表明函数本身的“推断行为”编译期可知：
+//  - 当函数接受 constexpr 入参时，返回 constexpr 常量
+//  - 当函数接受非 constexpr 入参时，也返回非 constexpr 变量
+constexpr int get_compile_time_value(int x) &#123;
+    return x;
+&#125;
+
+int get_runtime_value() &#123;
+    return 0;
+&#125;
+
+int main() &#123;
+// constexpr 用于变量时，仅能修饰编译期常量
+    constexpr int x = get_runtime_value(); // Compile error
+
+    constexpr int a = 0x114;
+    constexpr int y = get_compile_time_value(a); // OK
+
+    int b = 0x514;
+    constexpr int z = get_compile_time_value(b); // Compile error
+&#125;
+</code></pre>
+<p>C++11 中， <code>constexpr</code> 函数最多只能包含一条可执行语句，即 <code>return</code> 语句；C++14 以后不再有这个限制。</p>
+<p>C++11 中， <code>constexpr</code> 成员函数会被隐式地加上 <code>const</code> 修饰符，此时 <code>constexpr</code> 成员函数不能用于修改类的成员变量（当然可以通过 <code>mutable</code> 规避）；C++14 以后不再有这个限制。</p>
+<h3 id="C-11-类成员函数的生成机制"><a href="#C-11-类成员函数的生成机制" class="headerlink" title="C++11 类成员函数的生成机制"></a>C++11 类成员函数的生成机制</h3><pre><code class="cpp">// https://godbolt.org/z/xqKK6a5e4
+
+class Clazz &#123;
+ public:
+  // 默认构造函数
+  // 仅当类中没有显式声明任何构造函数时才生成
+  Clazz();
+
+  // 析构函数
+  // 1. 析构函数默认为 noexcept
+  // 2. 仅当基类的析构函数为虚时，派生类默认生成的析构函数才是虚的
+  ~Clazz();
+
+  // 复制构造函数/赋值运算符
+  // 1. 默认生成的复制构造函数将会依次调用非静态类成员变量的复制构造函数
+  // 2. 复制构造函数和赋值运算符**相互独立**，声明了其中一个并不会阻止编译器生成另一个
+  // 3. 显式声明移动操作会导致编译器**删除**复制操作
+  //    显式声明移动操作的类，可能是不可复制的，例如 unique_ptr
+  Clazz(const Clazz &amp;rhs);
+  Clazz&amp; operator=(const Clazz &amp;rhs);
+
+  // 移动构造函数/赋值运算符
+  // 1. 默认生成的移动构造函数将会依次调用非静态类成员变量的移动构造函数
+  //    若成员不可移动，则调用其复制构造函数
+  // 2. 移动构造函数和赋值运算符**不相互独立**
+  //    当显式声明移动操作时，说明你很可能在默认实现的基础上还需要进行其他的操作，
+  //    因此编译器生成的版本很有可能是不适用的
+  // 3. 显式声明复制操作或析构函数会阻止编译器生成移动操作
+  //    声明复制操作表明编译器的默认实现（按成员复制）不适用，而移动操作的默认实现很可能
+  //    包含成员的复制操作，因此大概率也是不适用的
+  Clazz(Clazz &amp;&amp;rhs);
+  Clazz&amp; operator=(Clazz&amp;&amp; rhs);
+&#125;;
+</code></pre>
+<p>类成员函数生成规则总结：</p>
+<p><img src="https://km.woa.com/asset/6566c178b63d44a29f6dc4e16ea2ef8f?height=589&width=995" alt="member-function-generation.png"></p>
+<p>类成员函数生成特征：</p>
+<ol>
+<li><p>当生成派生类的析构函数时，若基类的析构函数是个虚函数，则派生类生成的析构函数也是虚函数</p>
+</li>
+<li><p>其他情况下，编译器生成的成员函数都是 <code>public</code> 且 <code>inline</code> 的</p>
+</li>
+</ol>
+<p>另外，成员函数模板在任何情况下都不会抑制成员函数的生成。</p>
+<h3 id="使用-auto"><a href="#使用-auto" class="headerlink" title="使用 auto"></a>使用 <code>auto</code></h3><p>在 <code>clangd</code> + <code>clang-format</code> + <code>clang-tidy</code> 的加持下，建议多使用 <code>auto</code> 而不是显式地声明变量类型</p>
+<ol>
+<li><p>大部分情况下，你都很确定这个类型是啥，例如 <code>const auto it = std::find(...);</code> ，没有必要显式把变量类型标识出来；clangd 会显示 <code>it</code> 的推导类型，Code reviewer 在这种情况下相信也不会因为 <code>auto</code> 而困惑</p>
+</li>
+<li><p>少部分情况下，你其实并不真的知道函数返回的类型，这时候 <code>auto</code> 能降低你的一些心理负担，避免一些代码问题（不过这里就有利有弊了）</p>
+</li>
+</ol>
+<pre><code class="cpp">// https://godbolt.org/z/ocdvT6G7P
+// Case 1
+unordered_map&lt;int, string&gt; m = &#123;&#123;0x1, "Hello"&#125;&#125;;
+for (const auto &amp;kv : m) &#123; // Good
+    // kv.first 为 int const 类型，而非 int 类型
+&#125;
+
+// 存在隐式转换，造成多余的性能损失
+for (const pair&lt;int, string&gt; &amp;kv : m) &#123;...&#125; // Bad
+// C++17 结构化绑定
+for (const auto &amp;[k, v] : m) &#123;...&#125; // Good, I love it
+
+// Case 2
+vector&lt;bool&gt; v = &#123;false, true&#125;;
+const auto first = v.at(0); // Bad, or use static_cast later
+// first 为 std::_Bit_reference 类型，而非 bool 类型
+// ref: https://en.cppreference.com/w/cpp/container/vector_bool
+const bool first = v.at(0); // Implicitly transformed
+</code></pre>
+<h3 id="使用-std-function-代替函数指针"><a href="#使用-std-function-代替函数指针" class="headerlink" title="使用 std::function 代替函数指针"></a>使用 <code>std::function</code> 代替函数指针</h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/utility/functional/function"><code>std::function</code></a> 是 C++11 标准库中的一个模板，将函数指针的思想推广为任何的可调用对象（即重载了 <code>()</code> 操作符的对象）。相比函数指针，其适用性更广，代码可读性也更好，还可以跟 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/utility/functional/bind"><code>std::bind</code></a> 、 <a target="_blank" rel="noopener" href="https://github.com/abseil/abseil-cpp/blob/master/absl/functional/bind_front.h"><code>absl::bind_front</code></a> 、 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/lambda">Lambda 表达式</a>等特性结合。</p>
+<h3 id="使用-chrono-时间工具库"><a href="#使用-chrono-时间工具库" class="headerlink" title="使用 chrono 时间工具库"></a>使用 <code>chrono</code> 时间工具库</h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/chrono">chrono</a> 时间工具库相比 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/chrono/c/time"><code>std::time</code></a> 不管是从表达力还是从易用性上都好很多，<a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/chrono/duration#Literals">chrono_literals</a> 的加入更是让代码可读性更上一个台阶。日常业务开发中我们时常会有计算某段子例程执行时间的需求，这时候用 chrono 就很合适。</p>
+<pre><code class="cpp">#include &lt;chrono&gt;
+
+auto start = std::chrono::steady_clock::now();
+// Doing stuffs changing the world
+auto end = std::chrono::steady_clock::now();
+
+std::chrono::duration&lt;double&gt; elapsed_seconds = end - start;
+// Report
+</code></pre>
+<h3 id="尝试使用-Trailing-return-type"><a href="#尝试使用-Trailing-return-type" class="headerlink" title="尝试使用 Trailing return type"></a>尝试使用 Trailing return type</h3><ul>
+<li><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/function">Trailing return type</a> 是 C++11 引入的函数返回值声明语法，相比常规的函数声明语法更能突显函数的返回类型。</p>
+<pre><code class="cpp">char const *func1(void f(bool&amp;));
+auto func2(void f(bool&amp;)) -&gt; char const*;
+</code></pre>
+</li>
+<li><p>如果返回值类型是通过 <code>decltype</code> 声明，且 <code>decltype</code> 依赖入参，则此时必须使用 Trailing return type</p>
+<pre><code class="cpp">decltype(a.end()) end_1(const vector&lt;int&gt; &amp;a) &#123; // Compile error
+  return a.end();
+&#125;
+
+auto end_2(const vector&lt;int&gt; &amp;a) -&gt; decltype(a.end()) &#123; // OK
+  return a.end();
+&#125;
+
+decltype(auto) end_3(const vector&lt;int&gt; &amp;a) &#123; // OK since C++14
+  return a.end();
+&#125;
+</code></pre>
+</li>
+</ul>
+<h3 id="开始使用-Attribute"><a href="#开始使用-Attribute" class="headerlink" title="开始使用 Attribute"></a>开始使用 <code>Attribute</code></h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/attributes">Attribute specifier sequence</a> 是 C++11 开始引入的用于增强语义或进行编译器 hint 的特性，以下列举几个可以开始尝试的 attributes，具体可以自己多加探索（实际上就是我才疏学浅，用的不多）。</p>
+<ul>
+<li><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/attributes/nodiscard"><code>[[nodiscard]]</code></a> (since C++17) 目前觉得最好用的 attribute，可以用于修饰函数，表示该函数的返回值不可忽略，对于业务代码中常用 <code>ret</code> 作为返回值的场景还是比较有帮助的；特别是对于带返回值的纯函数（例如 const 成员函数），如果忽略了返回值，那实际上调用这个函数基本是无意义的（先不考虑修改 mutable 成员变量的情况）</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/22767523/what-inline-attribute-always-inline-means-in-the-function"><code>[[gnu::always_inline]]</code></a> (GCC) 配合 <code>inline</code> 使用，强制内联</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/attributes/deprecated"><code>[[deprecated]]</code></a> (since C++14)</p>
+</li>
+</ul>
+<h3 id="多用-lt-algorithm-gt-代替手撸小轮子"><a href="#多用-lt-algorithm-gt-代替手撸小轮子" class="headerlink" title="多用 &lt;algorithm&gt; 代替手撸小轮子"></a>多用 <code>&lt;algorithm&gt;</code> 代替手撸小轮子</h3><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/algorithm"><code>&lt;algorithm&gt;</code></a> 库里有很多宝藏（ <code>std::find_if</code> 、 <code>std::lower_bound</code> 、 <code>std::includes</code> …），细心的人才看得到。</p>
+<h3 id="C-11-并发库"><a href="#C-11-并发库" class="headerlink" title="C++11 并发库"></a>C++11 并发库</h3><p>C++11 开始引入 <code>std::thread</code> ，相比 <a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man7/pthreads.7.html">pthread</a> 抽象层级更高，更易用，同时还有其他诸如 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/atomic/atomic"><code>std::atomic</code></a> 、 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/thread/async"><code>std::async</code></a> 等并发 API，助力有锁 / 无锁的并发编程。不过并发这个话题还是有点太大了，本菜鸡也只是写过一点 demo，就推荐一些认为读过（或没读过）感觉还不错的文章和书籍了。</p>
+<ul>
+<li><p><a target="_blank" rel="noopener" href="https://paul.pub/cpp-concurrency/">C++ 并发编程（从 C++11 到 C++17）</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://paul.pub/cpp-memory-model/">C++ 内存模型</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/24301047/answer/83422523">如何理解 C++11 的六种 memory order？</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://book.douban.com/subject/4130141/">《C++ Concurrency in Action》</a></p>
+</li>
+</ul>
+<h2 id="下一步"><a href="#下一步" class="headerlink" title="下一步"></a>下一步</h2><p>C++17 → C++20/23 → <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/coroutines">Stackless coroutines</a> → <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Template_metaprogramming">Template metaprogramming</a> → Compiler …</p>
+<p>最后<del><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/31385520">「精通 C++」</a></del> ❎ 拥抱 Rust ✅</p>
+<p>感谢你看到<del>（或划到）</del>这里 🥳，希望大家多多交流，多多指正，分享你的学习路线、资源和方法，像我这样的 C++ 菜鸡能救一个是一个 🤣</p>
+</article>
+    
+    <div id="gitalk-container"></div>
+    
+  </div>
+</div>
+
+
+<script>
+  const gitalk = new Gitalk({
+    clientID: "62d9cfd6ee638cc81c5c",
+    clientSecret: "63f13373585b9b247297e68da9e522e14802e1fd",
+    repo: "Aneureka.github.io",
+    owner: "Aneureka",
+    admin: "Aneureka",
+    id: location.pathname,
+    distractionFreeMode: "false",
+    language: "zh-CN",
+  });
+
+  gitalk.render("gitalk-container");
+</script>
+
+ <!-- Footer -->
+<footer class="section">
+  <div class="container main footer">
+    <ul class="contact-list">
+      
+      <li class="contact-list-item">
+        <a href="mailto:aneureka2@gmail.com">Email</a>
+        <a href="mailto:aneureka2@gmail.com">💌</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">Github</a>
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">⭐️</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">Twitter</a>
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">🐦</a>
+      </li>
+      
+    </ul>
+    <div class="copyright">
+      散落的叶子 · 2017 -
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      · <a target="_blank" rel="noopener" href="https://beian.miit.gov.cn">粤ICP备2021087752号</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+></script>
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-56506279-6");
+    </script>
+  </body>
+</html>
