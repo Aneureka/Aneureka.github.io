@@ -704,7 +704,7 @@ void set_alarm(Time t, Sound s, Duration d, Volume v);
 </code></pre>
 <p><a target="_blank" rel="noopener" href="https://abseil.io/tips/108">abseil 提供了 <code>bind_front</code> 函数</a>，相比 <code>std::bind</code> 在多数情况下更易用。</p>
 <h2 id="实践杂谈"><a href="#实践杂谈" class="headerlink" title="实践杂谈"></a>实践杂谈</h2><h3 id="初始化方法的选择"><a href="#初始化方法的选择" class="headerlink" title="初始化方法的选择"></a>初始化方法的选择</h3><p>C++ 11 引入了统一初始化（ <code>&#123;&#125;</code> 初始化），至此，各种初始化方法整体比较如下图所示：</p>
-<p><img src="https://km.woa.com/asset/59dc011e71924195bed238ac9691abde?height=1316&width=1966" alt="initialization.png"></p>
+<p><img src="https://img.picgo.net/2022/11/25/Untitledd5f4665c70d90197.png" alt="initialization.png"></p>
 <p>（图源 <a target="_blank" rel="noopener" href="http://josuttis.com/cpp/c++initialization.pdf">http://josuttis.com/cpp/c++initialization.pdf</a> ）</p>
 <p>统一初始化的优势主要有：</p>
 <ul>
@@ -922,7 +922,7 @@ class Clazz &#123;
 &#125;;
 </code></pre>
 <p>类成员函数生成规则总结：</p>
-<p><img src="https://km.woa.com/asset/6566c178b63d44a29f6dc4e16ea2ef8f?height=589&width=995" alt="member-function-generation.png"></p>
+<p><img src="https://img.picgo.net/2022/11/25/Untitled-10a41462db2a09e61.png" alt="member-function-generation.png"></p>
 <p>类成员函数生成特征：</p>
 <ol>
 <li><p>当生成派生类的析构函数时，若基类的析构函数是个虚函数，则派生类生成的析构函数也是虚函数</p>
