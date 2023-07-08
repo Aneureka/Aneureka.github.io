@@ -6,7 +6,7 @@
   <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
   
   <link href="https://www.aneureka.cn/"/>
-  <updated>2023-07-08T11:12:41.375Z</updated>
+  <updated>2023-07-08T11:12:50.660Z</updated>
   <id>https://www.aneureka.cn/</id>
   
   <author>
@@ -15,32 +15,6 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
-  
-  <entry>
-    <title>C++ 中提高性能的编码实践</title>
-    <link href="https://www.aneureka.cn/cpp-practices-to-improve-performance-2023-07-08/"/>
-    <id>https://www.aneureka.cn/cpp-practices-to-improve-performance-2023-07-08/</id>
-    <published>2023-07-08T10:18:21.000Z</published>
-    <updated>2023-07-08T11:12:41.375Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;h1 id=&quot;参考资料&quot;&gt;&lt;a href=&quot;#参考资料&quot; class=&quot;headerlink&quot; title=&quot;参考资料&quot;&gt;&lt;/a&gt;参考资料&lt;/h1&gt;&lt;ul&gt;
-&lt;li&gt;&lt;p&gt;&lt;a</summary>
-        
-      
-    
-    
-    
-    
-    <category term="C++" scheme="https://www.aneureka.cn/tags/C/"/>
-    
-    <category term="性能" scheme="https://www.aneureka.cn/tags/%E6%80%A7%E8%83%BD/"/>
-    
-  </entry>
   
   <entry>
     <title>Effective Modern C++ 读书笔记</title>
