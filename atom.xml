@@ -6,7 +6,7 @@
   <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
   
   <link href="https://www.aneureka.cn/"/>
-  <updated>2023-07-08T10:39:35.573Z</updated>
+  <updated>2023-07-08T11:12:41.375Z</updated>
   <id>https://www.aneureka.cn/</id>
   
   <author>
@@ -21,7 +21,7 @@
     <link href="https://www.aneureka.cn/cpp-practices-to-improve-performance-2023-07-08/"/>
     <id>https://www.aneureka.cn/cpp-practices-to-improve-performance-2023-07-08/</id>
     <published>2023-07-08T10:18:21.000Z</published>
-    <updated>2023-07-08T10:39:35.573Z</updated>
+    <updated>2023-07-08T11:12:41.375Z</updated>
     
     
       
@@ -38,7 +38,7 @@
     
     <category term="C++" scheme="https://www.aneureka.cn/tags/C/"/>
     
-    <category term="Performance" scheme="https://www.aneureka.cn/tags/Performance/"/>
+    <category term="性能" scheme="https://www.aneureka.cn/tags/%E6%80%A7%E8%83%BD/"/>
     
   </entry>
   
@@ -47,7 +47,7 @@
     <link href="https://www.aneureka.cn/effective-modern-cpp-notes-2022-11-26/"/>
     <id>https://www.aneureka.cn/effective-modern-cpp-notes-2022-11-26/</id>
     <published>2022-11-26T07:16:05.000Z</published>
-    <updated>2022-11-27T05:09:54.385Z</updated>
+    <updated>2023-07-08T11:12:50.660Z</updated>
     
     
       
@@ -63,10 +63,6 @@
     
     <category term="C++" scheme="https://www.aneureka.cn/tags/C/"/>
     
-    <category term="C++11" scheme="https://www.aneureka.cn/tags/C-11/"/>
-    
-    <category term="C++14" scheme="https://www.aneureka.cn/tags/C-14/"/>
-    
   </entry>
   
   <entry>
@@ -74,7 +70,7 @@
     <link href="https://www.aneureka.cn/abbr-bot-2021-10-04/"/>
     <id>https://www.aneureka.cn/abbr-bot-2021-10-04/</id>
     <published>2021-10-04T13:12:21.000Z</published>
-    <updated>2022-03-20T11:07:40.327Z</updated>
+    <updated>2023-07-08T11:13:05.339Z</updated>
     
     
       
@@ -89,9 +85,9 @@
     
     
     
-    <category term="Project" scheme="https://www.aneureka.cn/tags/Project/"/>
+    <category term="项目" scheme="https://www.aneureka.cn/tags/%E9%A1%B9%E7%9B%AE/"/>
     
-    <category term="Thoughts" scheme="https://www.aneureka.cn/tags/Thoughts/"/>
+    <category term="思考" scheme="https://www.aneureka.cn/tags/%E6%80%9D%E8%80%83/"/>
     
   </entry>
   
