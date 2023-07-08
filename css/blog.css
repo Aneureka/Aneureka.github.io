@@ -77,8 +77,6 @@ ul {
 .markdown-body {
   -ms-text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
-  /* color: #24292e; */
-  /* color: black; */
   line-height: 1.8;
   font-family: Segoe UI, Roboto, Helvetica, Arial, PingFang SC, Hiragino Sans GB,
     Microsoft Yahei, sans-serif;
@@ -247,7 +245,7 @@ ul {
 .markdown-body code,
 .markdown-body kbd,
 .markdown-body pre {
-  font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+  font-family: Monaco, Consolas, "Andale Mono", "Ubuntu Mono", monospace;
   font-size: 1em;
 }
 
@@ -605,7 +603,6 @@ ul {
 
 .markdown-body h1,
 .markdown-body h2 {
-  /* border-bottom: 1px solid #eaecef; */
   padding-top: 1em;
   padding-bottom: 0.2em;
   font-weight: 500;
@@ -825,7 +822,7 @@ ul {
 
 .markdown-body .blob-code-inner {
   color: #24292e;
-  font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+  font-family: Monaco, Consolas, "Andale Mono", "Ubuntu Mono", monospace;
   font-size: 12px;
   overflow: visible;
   white-space: pre;
