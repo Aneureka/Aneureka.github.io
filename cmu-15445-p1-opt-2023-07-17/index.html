@@ -1,0 +1,235 @@
+<html>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="Aneureka" />
+  <meta name="description" content="要技艺超群，要予人温暖。" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    property="og:title"
+    content="CMU 15-445 P1 优化（偷分）攻略 · 散落的叶子"
+  />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/index.html" />
+  <meta property="og:description" content="要技艺超群，要予人温暖。" />
+  <meta property="og:image" content="https://www.aneureka.cn/img/favicon.ico" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@Aneureka" />
+  <meta name="twitter:url" content="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/index.html" />
+  <meta name="twitter:title" content="散落的叶子" />
+  <meta name="twitter:description" content="要技艺超群，要予人温暖。" />
+  <meta name="twitter:image" content="https://www.aneureka.cn/img/cover.png" />
+  <title>
+    CMU 15-445 P1 优化（偷分）攻略 · 散落的叶子
+  </title>
+  
+  <link rel="icon" href="/img/favicon.ico" />
+  <link rel="apple-touch-icon" href="/img/favicon.ico" />
+  <link rel="bookmark" href="/img/favicon.ico" />
+  <link rel="shortcut icon" href="/img/favicon.ico" />
+  
+  <link
+    rel="stylesheet"
+    href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+  />
+  
+<link rel="stylesheet" href="/css/blog.css">
+
+  
+<link rel="stylesheet" href="/css/global.css">
+
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="散落的叶子" type="application/atom+xml">
+</head>
+
+  <body>
+    <div class="blog-header section">
+  <nav>
+    <div class="container main header">
+      <a href="/">
+        <img class="logo" src="/img/favicon.ico" />
+      </a>
+      <div class="menu">
+        
+        <a class="menu-item" href="/">
+          <span class="menu-item-text">散落的叶子</span>
+        </a>
+        
+      </div>
+    </div>
+  </nav>
+</div>
+ <div class="section">
+  <div class="container main post">
+    
+    <!-- Title -->
+    <h2 class="title">CMU 15-445 P1 优化（偷分）攻略</h2>
+    <!-- Date and Author -->
+    <p class="subtitle is-7 has-text-grey">
+      2023-07-17 by Aneureka
+    </p>
+    
+    <!-- Content -->
+    <article class="markdown-body"><p>最近把 <a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/">CMU 15-445</a> (2023) 的实验部分做完了，刚好找一个周日琢磨一下优化的部分，于是就开始了愉快的 <a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/spring2023/project1/">P1</a> 优化之旅。</p>
+<p>本文适用于 P1 实验部分已经完成（做完 <a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/spring2023/project4/">P4</a> 理解会更深刻）、希望探讨 P1 优化思路和方案的同学。本文仅是引蛇出洞，欢迎大佬们一起讨论~</p>
+<h2 id="优化结果"><a href="#优化结果" class="headerlink" title="优化结果"></a>优化结果</h2><p>经过优化后，在 Leaderboard 中暂列第三（2023-07-17，top1 不知道是什么神仙 orz）</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/p1-leaderboard.png" alt="p1-leaderboard"></p>
+<h2 id="分析-Workload，明确优化方向"><a href="#分析-Workload，明确优化方向" class="headerlink" title="分析 Workload，明确优化方向"></a>分析 Workload，明确优化方向</h2><p>第一步，我们要先搞清楚 benchmark 做了什么事情、如何计分，才能制定优化的目标，划分优化项的优先级。</p>
+<p>从<a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/spring2023/project1/#bpm-bench">实验文档</a>和<a target="_blank" rel="noopener" href="https://github.com/cmu-db/bustub/blob/master/tools/bpm_bench/bpm_bench.cpp">源码</a>都可以看出，bpm-bench 是通过 8 个 scan 线程和 8 个 get 线程并发读取和更新 BufferPool 中的页面，其中 scan 是顺序读写，get 是基于 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Zipf's_law">zipfian distribution</a> 的随机读写。另外，硬盘是使用来模拟读写操作，并通过设定 sleep 时间来模拟硬盘读写的延迟（<a target="_blank" rel="noopener" href="https://github.com/cmu-db/bustub/blob/master/src/include/storage/disk/disk_manager_memory.h">可见源码</a>）。</p>
+<p>最终的分数则是通过加权计算硬盘读写延迟设定为 0ms 和 1ms 时的 BufferPool QPS 来综合计算：</p>
+<pre><code>scan_qps_0ms / 10000 + get_qps_0ms / 10000 + scan_qps_1ms + get_qps_1ms * 10
+</code></pre>
+<p>可以看到，硬盘 1ms 读写延迟对应的 BufferPool 性能测试结果权重相比 0ms 高非常多，并且 get 是 scan 是 10 倍，即 benchmark 非常注重 BufferPool 在接近真实场景下的性能表现。因此，到这里我们也可以得出优化目标：</p>
+<ol>
+<li><strong>提高 BufferPool 在硬盘 1ms 延迟下的性能（高优先级）</strong></li>
+<li><strong>针对 scan 场景做特定优化（低优先级）</strong></li>
+</ol>
+<h2 id="Profiling"><a href="#Profiling" class="headerlink" title="Profiling"></a>Profiling</h2><p>在明确优化目标之后，我们可以通过 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Profiling_(computer_programming)">Profiling</a> 验证我们的代码在 benchmark 的 workload 下，是不是如期表现，同时看看有没有其他值得优化的地方。</p>
+<p>目前我的实现跟大家差不多，BufferPool 通过一个 mutex（大锁）同步对缓冲池的读写操作，LRUKReplacer 则是通过维护 1.未满 K 次访问 2.满 K 次访问 的 frame 链表实现。因此，对于硬盘读写 0ms 延迟的场景，表现目测会还可以；但对于 1ms 延迟的场景，我们就可以预见到 BufferPool 某一线程拿完大锁然后卡在硬盘读写的场景了，这种情况下 QPS 最高也只能达到 1000 左右。</p>
+<p>那..开始验证吧，在 MacOS 上用 Instruments 分别就 0ms 和 1ms 的场景做 profiling，得到以下结果：</p>
+<ul>
+<li>硬盘 0ms 读写延迟对应的 BufferPool profiling 结果和火焰图：<br><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/profiling-0ms-old.png" alt="Profiling 结果 (0ms)"><br><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/flame-graph-0ms-old.png" alt="火焰图 (0ms)"></li>
+<li>硬盘 1ms 读写延迟对应的 BufferPool profiling 结果和火焰图：<br><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/profiling-1ms-old.png" alt="Profiling 结果 (1ms)"><br><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/flame-graph-1ms-old.png" alt="火焰图 (1ms)"></li>
+</ul>
+<p>从 Profiling 结果可以看到，0ms 对应的 scan+get 线程的 CPU 占用时间为 47.75s，而 0ms 只有 839ms，这就验证了我们前面的结论——这种情况下BufferPool 的一个线程拿了大锁，阻塞在对硬盘的读写操作中，而其他线程又只能在旁边干等。</p>
+<p>观察 0ms 对应的火焰图，除了加锁、解锁操作外没有明显的平顶，整体符合预期，因此<strong>没有必要通过更换 STL 数据结构等方式来提高性能</strong>。</p>
+<h2 id="优化一：异步处理硬盘读写"><a href="#优化一：异步处理硬盘读写" class="headerlink" title="优化一：异步处理硬盘读写"></a>优化一：异步处理硬盘读写</h2><p>在目前的设计中，我们采用的是同步读写硬盘的硬盘的做法，因此会出现下图中线程 T2 拿到大锁阻塞在硬盘写操作、线程 T1 和 T3 阻塞在获取锁的情况，导致完全让出 CPU。</p>
+<div align="center">
+<img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/blocking-indication.png" alt="blocking-indication" style="width: 500px;" />
+</div>
+
+<p>因此我们可以考虑一下，如何将硬盘的读写操作变成异步，让线程不再阻塞在这些耗时操作上面。</p>
+<p>首先考虑硬盘读操作，读操作需要同步，因为下游在 FetchPage 之后可能会立即读取页面数据，而这个读取操作是不经过 BufferPool 的，我们无法控制。硬盘写操作可以异步执行，只要我们<strong>保证对同个页面的写操作与 WritePage 的调用顺序保持一致</strong>即可。怎么保证顺序一致？加锁！但此时我们就只需要按页面加锁（page-wise）就可以了，<strong>一个页面的硬盘读写操作不会阻塞另一个页面</strong>，大大提高了并发度。</p>
+<p>初步的想法有了，怎么设计？我们可以在 BufferPool 和 DiskManager 中间加一层 DiskManagerProxy，由 DiskManagerProxy 对外抽象硬盘的读写接口，并在内部进行读写操作的调度，如下图所示。</p>
+<div align="center">
+<img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/disk-manager-proxy-indication.png" alt="blocking-indication" style="width: 500px;" />
+</div>
+
+
+<p>DiskManagerProxy 内部又如何实现呢？我们可以对每个页面维护一个写操作请求队列（DiskWriteRequestQueue），每当有一次 WritePage 调用就追加一个写请求（DiskWriteRequest），等待前面的写请求对应的线程来唤醒（通过互斥体和条件变量来协调线程）。在当前线程被唤醒后，我们需要额外创建一个线程，异步执行真正的写硬盘操作，并在写完硬盘后从请求队列中把自己 pop 掉，再唤醒等待中的写请求即可（做完 P4 的同学是不是感觉很熟悉？）</p>
+<p>而对于读操作，我们只需要看一下 DiskWriteRequestQueue 是否为空，如果不为空，说明有写请求还未执行完成，此时我们只需要拿最后一个写请求的数据就可以了；如果为空，再执行真正的硬盘读操作。</p>
+<p>在此基础上，我们可以注意到，<strong>读写操作的结果没有被充分利用</strong>。比如一个写操作执行完成之后，读请求进来了发现 DiskWriteRequestQueue 没有写请求，就回头读硬盘了，此时如果另外一个读请求进来了还是得读硬盘。因此我们在 DiskWriteRequestQueue 上加一块缓存，再加一个布尔值做缓存是否有效的标记。这样，写请求执行完成后发现队列里没有其他写请求了，就可以写入缓存；读请求执行完成后也可以写入缓存，后面有读请求进来就直接读缓存就可以了。</p>
+<p>至此，我们可以得出 DiskManagerProxy 的整体框架如下：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/disk-manager-proxy-design.png" alt="image-20230717175215933"></p>
+<p>最后，我们总结一下基于 DiskManagerProxy 的硬盘读写操作（一直在想要不要把这部分写出来 🤯）：</p>
+<ul>
+<li>WritePage<ul>
+<li>获取 page_id 对应的 DiskWriteRequestQueue 锁，构造 DiskWriteRequest 追加到写请求队列中，并将缓存置为 invalid</li>
+<li>如果当前队列为空，则把自身设置为 ready</li>
+<li>等待直到（其他线程将）当前写请求设置为 ready</li>
+<li>新建一个线程，执行真正的 WritePage 操作，执行完成后：<ul>
+<li>将当前写请求 pop 出队列</li>
+<li>如果队列为空，则更新缓存，并置为 valid；否则将下一个写请求置为 ready 并唤醒之</li>
+</ul>
+</li>
+<li>detach 该线程</li>
+</ul>
+</li>
+<li>ReadPage<ul>
+<li>获取 page_id 对应的 DiskWriteRequestQueue 锁，检查写请求队列是否为空，若不为空则直接拷贝最后一个写请求的页面数据</li>
+<li>检查缓存是否失效，若失效则执行真正的 ReadPage 操作将页面数据加载到缓存中，并将缓存置为 valid</li>
+<li>拷贝缓存中的页面数据到 BufferPool 的页面中</li>
+</ul>
+</li>
+</ul>
+<p>经过这部分优化，会发现 1ms 延迟的情况下，BufferPool 已经能达到数万 QPS 了；但 0ms 延迟的情况相比原来的实现 QPS 也会大幅降低（这也是理所当然的捏 😋）</p>
+<p>当然，在 BufferPool 使用完成后，可能还会存在部分写请求还未执行完成，这时候需要处理完这些写请求再析构 BufferPool，不然会有 use-heap-after-free 问题，这部分就交给聪明的读者考虑啦~</p>
+<p>经过这一部分优化后，我们再对执行 Profiling，可以得到如下的火焰图。首先可以看到，get/scan 线程的 CPU 总占用时间重新回到了 1min 左右，符合预期。同时，由于每次写操作都会产生新的线程，所以右边会形成密密麻麻的调用栈。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/flame-graph-1ms-new.png" alt="火焰图 (0ms，优化后)"></p>
+<h2 id="优化二：针对-scan-场景调优"><a href="#优化二：针对-scan-场景调优" class="headerlink" title="优化二：针对 scan 场景调优"></a>优化二：针对 scan 场景调优</h2><p>scan 场景的特性是，在读写第 K 个页面时，短时间内：</p>
+<ol>
+<li>第 K-1 个页面极大概率不会被读写 -&gt; 通过提高上一个页面的 evict 优先级优化</li>
+<li>第 K+1 个页面极大概率会被读写 -&gt; 通过预读取下一个页面优化（prefetch）</li>
+</ol>
+<p>对于前者，我们在执行 RecordAccess(access_type == Scan) 操作时，如果该 frame 访问不满 K 次，可以将其放到未满 K 次访问的 frame 链表开头（而不是结尾），即让其下一个被 evict。</p>
+<p>对于后者，由于我们目前已经是异步读取，prefetch 带来的收益并不高，反而会进一步提升实现的复杂度，因此就没有做这部分优化。</p>
+<p>经过对比此部分优化提升可以说基本为 0，主要原因是在 bpm-bench 的 workload 下，BufferPool 的缓存命中率整体较低（之前测试过不足 &lt; 5%），加上这一优化对缓存命中率提升也较小。</p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>本文以 CMU 15-445 P1 的性能优化过程为例，介绍了性能优化的基本思路和做法，提出 DiskManagerProxy 并发调度硬盘写操作的方法解决内存和硬盘的读写速度差异造成的性能瓶颈，稍显稚嫩，希望能帮助到需要的同学，也希望大佬们多提意见，共同进步~</p>
+</article>
+    
+    <div id="gitalk-container"></div>
+    
+  </div>
+</div>
+
+
+<script>
+  const gitalk = new Gitalk({
+    clientID: "62d9cfd6ee638cc81c5c",
+    clientSecret: "63f13373585b9b247297e68da9e522e14802e1fd",
+    repo: "Aneureka.github.io",
+    owner: "Aneureka",
+    admin: "Aneureka",
+    id: location.pathname,
+    distractionFreeMode: "false",
+    language: "zh-CN",
+  });
+
+  gitalk.render("gitalk-container");
+</script>
+
+ <!-- Footer -->
+<footer class="section">
+  <div class="container main footer">
+    <ul class="contact-list">
+      
+      <li class="contact-list-item">
+        <a href="mailto:aneureka2@gmail.com">Email</a>
+        <a href="mailto:aneureka2@gmail.com">💌</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">Github</a>
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">⭐️</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">Twitter</a>
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">🐦</a>
+      </li>
+      
+    </ul>
+    <div class="copyright">
+      散落的叶子 · 2017 -
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      · <a target="_blank" rel="noopener" href="https://beian.miit.gov.cn">粤ICP备2021087752号</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script>
+  hljs.highlightAll();
+</script>
+
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-56506279-6");
+    </script>
+  </body>
+</html>

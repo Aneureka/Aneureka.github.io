@@ -6,7 +6,7 @@
   <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
   
   <link href="https://www.aneureka.cn/"/>
-  <updated>2023-07-08T11:12:50.660Z</updated>
+  <updated>2023-07-17T12:48:42.925Z</updated>
   <id>https://www.aneureka.cn/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>CMU 15-445 P1 优化（偷分）攻略</title>
+    <link href="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/"/>
+    <id>https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/</id>
+    <published>2023-07-17T03:35:31.000Z</published>
+    <updated>2023-07-17T12:48:42.925Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;最近把 &lt;a href=&quot;https://15445.courses.cs.cmu.edu/&quot;&gt;CMU 15-445&lt;/a&gt; (2023) 的实验部分做完了，刚好找一个周日琢磨一下优化的部分，于是就开始了愉快的 &lt;a</summary>
+        
+      
+    
+    
+    
+    
+    <category term="Database" scheme="https://www.aneureka.cn/tags/Database/"/>
+    
+  </entry>
   
   <entry>
     <title>Effective Modern C++ 读书笔记</title>
@@ -70,7 +93,7 @@
     <link href="https://www.aneureka.cn/notion-practice-2021-05-08/"/>
     <id>https://www.aneureka.cn/notion-practice-2021-05-08/</id>
     <published>2021-05-07T16:17:54.000Z</published>
-    <updated>2022-03-20T11:07:40.335Z</updated>
+    <updated>2023-07-17T12:34:42.181Z</updated>
     
     
       
@@ -95,7 +118,7 @@
     <link href="https://www.aneureka.cn/plan-2021-01-31/"/>
     <id>https://www.aneureka.cn/plan-2021-01-31/</id>
     <published>2021-01-31T08:00:15.000Z</published>
-    <updated>2022-03-20T11:07:40.336Z</updated>
+    <updated>2023-07-17T11:54:16.390Z</updated>
     
     
       
