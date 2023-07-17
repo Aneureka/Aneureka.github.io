@@ -114,7 +114,7 @@
 <p>而对于读操作，我们只需要看一下 DiskWriteRequestQueue 是否为空，如果不为空，说明有写请求还未执行完成，此时我们只需要拿最后一个写请求的数据就可以了；如果为空，再执行真正的硬盘读操作。</p>
 <p>在此基础上，我们可以注意到，<strong>读写操作的结果没有被充分利用</strong>。比如一个写操作执行完成之后，读请求进来了发现 DiskWriteRequestQueue 没有写请求，就回头读硬盘了，此时如果另外一个读请求进来了还是得读硬盘。因此我们在 DiskWriteRequestQueue 上加一块缓存，再加一个布尔值做缓存是否有效的标记。这样，写请求执行完成后发现队列里没有其他写请求了，就可以写入缓存；读请求执行完成后也可以写入缓存，后面有读请求进来就直接读缓存就可以了。</p>
 <p>至此，我们可以得出 DiskManagerProxy 的整体框架如下：</p>
-<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/disk-manager-proxy-design.png" alt="image-20230717175215933"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/disk-manager-proxy-design.png" alt="disk-manager-proxy-design"></p>
 <p>最后，我们总结一下基于 DiskManagerProxy 的硬盘读写操作（一直在想要不要把这部分写出来 🤯）：</p>
 <ul>
 <li>WritePage<ul>
