@@ -140,6 +140,7 @@ p a::after {
 .footer {
   background-color: transparent;
   margin-top: 1rem;
+  padding: 0;
   padding-top: 1rem;
   padding-bottom: 1rem;
   border-top: 1px dashed #ab3c3a44;

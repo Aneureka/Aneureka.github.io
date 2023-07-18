@@ -151,26 +151,31 @@
 <h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>本文以 CMU 15-445 P1 的性能优化过程为例，介绍了性能优化的基本思路和做法，提出 DiskManagerProxy 并发调度硬盘写操作的方法解决内存和硬盘的读写速度差异造成的性能瓶颈，稍显稚嫩，希望能帮助到需要的同学，也希望大佬们多提意见，共同进步~</p>
 </article>
     
-    <div id="gitalk-container"></div>
+    <div id="giscus-container" class="giscus"></div>
+    
     
   </div>
 </div>
 
 
-<script>
-  const gitalk = new Gitalk({
-    clientID: "62d9cfd6ee638cc81c5c",
-    clientSecret: "63f13373585b9b247297e68da9e522e14802e1fd",
-    repo: "Aneureka.github.io",
-    owner: "Aneureka",
-    admin: "Aneureka",
-    id: location.pathname,
-    distractionFreeMode: "false",
-    language: "zh-CN",
-  });
+<script
+  src="https://giscus.app/client.js"
+  data-repo="aneureka/Aneureka.github.io"
+  data-repo-id="MDEwOlJlcG9zaXRvcnkxMjY0Nzk4MzY="
+  data-category="Announcements"
+  data-category-id="DIC_kwDOB4nt3M4CX9S7"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="bottom"
+  data-theme="light_protanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async
+></script>
 
-  gitalk.render("gitalk-container");
-</script>
+
 
  <!-- Footer -->
 <footer class="section">
@@ -215,12 +220,6 @@
   hljs.highlightAll();
 </script>
 
-
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css"
-  />
-  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
 
     <script>
       window.dataLayer = window.dataLayer || [];
