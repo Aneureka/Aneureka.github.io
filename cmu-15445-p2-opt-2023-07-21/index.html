@@ -75,7 +75,7 @@
     
     <!-- Content -->
     <article class="markdown-body"><p>前传：<a href="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/">CMU 15-445 2023 P1 优化攻略 [rank#3]</a></p>
-<p>书接<a href="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/">上文</a>，此番我们来探讨一下 CMU 15-445 <a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/spring2023/project2/">P2</a> 的优化策略。</p>
+<p>书接上回，此番我们来探讨一下 CMU 15-445 <a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/spring2023/project2/">P2</a> 的优化策略。</p>
 <p>温馨提示：</p>
 <ul>
 <li>本文适用于 P2 实验部分已经完成、希望探讨 P2 优化思路和方案的同学，关于实验的正确实现请独立思考和实现</li>
@@ -123,7 +123,7 @@
 <p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/93252bb1ee26de88af0985b9cdfaf1a3.png" alt="93252bb1ee26de88af0985b9cdfaf1a3"></p>
 <p>发现火焰图中产生很多平顶，全在 BufferPoolManager 的大锁上，至此我们知道 B+ 树本身的性能已经被差不多榨干了，<strong>BufferPoolManager 的大锁作为隐藏 boss 跳出来了</strong>。</p>
 <p>在 P2 的 benchmark 中，由于 DiskManager 采用的是 0ms 延迟的 DiskManagerUnlimitedMemory，因此基本不构成性能瓶颈，反而是 BufferPoolManager 的大锁坏了事情。因此，联想到 Java 中 ConcurrentHashMap 的分段锁优化和各种热 key 拆分策略（知识迁移），我们也可以尝试将 BufferPool 分段，将大锁拆分成几把段锁，每把锁协调一部分资源的调度，然后再根据 page_id 做 hash 进行请求分发，岂不美哉？整体思路对应视图如下：</p>
-<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/image-20230721172236876.png" alt="image-20230721172236876"></p>
+<p><img src="/Users/hiki/Desktop/image-20230721172236876.png" alt="image-20230721172236876"></p>
 <p>分段也会产生一些问题：</p>
 <ul>
 <li><strong>什么时候分段？分为几段？</strong>由于分段也会产生额外的 overhead，而且在 pool size 较小时，大锁可能并不是瓶颈，所以我们可以划分一个触发分段的 pool size，比如为 256 ;-)<br>另外，经过测试，分段数为 12 左右时，性能表现较高</li>
@@ -139,7 +139,7 @@
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>整个优化和文章记录的过程跟 P1 差不多，耗时两天左右，又是收获满满~ </p>
 <p>PS: P3 和 P4 的优化暂时应该不动笔了，当下有其他更重要的事情需要完成，后面有空再来写写（当然也有一定概率真香哈哈哈）~ 期待大佬们的思路~</p>
 <p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/c4c333dfd2c1195e15d20e0a3cd0a9c5.png" alt="c4c333dfd2c1195e15d20e0a3cd0a9c5"></p>
-<p>如果一定要有一个 takeaway，我希望是<strong>「性能调优要遵循基本法」</strong> 🥵</p>
+<p>如果一定要有一个 takeaway，我觉得是<strong>「性能调优要遵循基本法」</strong> 🥵</p>
 <p>最后，希望你看完本文有所收获，然后吃顿好吃的 🥳</p>
 </article>
     
