@@ -6,7 +6,7 @@
   <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
   
   <link href="https://www.aneureka.cn/"/>
-  <updated>2023-07-17T12:56:23.743Z</updated>
+  <updated>2023-07-21T10:02:22.596Z</updated>
   <id>https://www.aneureka.cn/</id>
   
   <author>
@@ -17,11 +17,36 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>CMU 15-445 P1 优化（偷分）攻略</title>
+    <title>CMU 15-445 (2023) P2 优化（偷分）攻略</title>
+    <link href="https://www.aneureka.cn/cmu-15445-p2-opt-2023-07-21/"/>
+    <id>https://www.aneureka.cn/cmu-15445-p2-opt-2023-07-21/</id>
+    <published>2023-07-21T07:06:07.000Z</published>
+    <updated>2023-07-21T10:02:22.596Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;书接&lt;a href=&quot;https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/&quot;&gt;上文&lt;/a&gt;，此番我们来优化一下 CMU 15-445 &lt;a</summary>
+        
+      
+    
+    
+    
+    
+    <category term="数据库" scheme="https://www.aneureka.cn/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="性能调优" scheme="https://www.aneureka.cn/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>CMU 15-445 (2023) P1 优化（偷分）攻略</title>
     <link href="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/"/>
     <id>https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/</id>
     <published>2023-07-17T03:35:31.000Z</published>
-    <updated>2023-07-17T12:56:23.743Z</updated>
+    <updated>2023-07-21T07:09:20.823Z</updated>
     
     
       
@@ -35,7 +60,9 @@
     
     
     
-    <category term="Database" scheme="https://www.aneureka.cn/tags/Database/"/>
+    <category term="数据库" scheme="https://www.aneureka.cn/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="性能调优" scheme="https://www.aneureka.cn/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/"/>
     
   </entry>
   

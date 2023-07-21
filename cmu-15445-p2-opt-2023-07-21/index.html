@@ -1,0 +1,225 @@
+<html>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="Aneureka" />
+  <meta name="description" content="要技艺超群，要予人温暖。" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    property="og:title"
+    content="CMU 15-445 (2023) P2 优化（偷分）攻略 · 散落的叶子"
+  />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://www.aneureka.cn/cmu-15445-p2-opt-2023-07-21/index.html" />
+  <meta property="og:description" content="要技艺超群，要予人温暖。" />
+  <meta property="og:image" content="https://www.aneureka.cn/img/favicon.ico" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@Aneureka" />
+  <meta name="twitter:url" content="https://www.aneureka.cn/cmu-15445-p2-opt-2023-07-21/index.html" />
+  <meta name="twitter:title" content="散落的叶子" />
+  <meta name="twitter:description" content="要技艺超群，要予人温暖。" />
+  <meta name="twitter:image" content="https://www.aneureka.cn/img/cover.png" />
+  <title>
+    CMU 15-445 (2023) P2 优化（偷分）攻略 · 散落的叶子
+  </title>
+  
+  <link rel="icon" href="/img/favicon.ico" />
+  <link rel="apple-touch-icon" href="/img/favicon.ico" />
+  <link rel="bookmark" href="/img/favicon.ico" />
+  <link rel="shortcut icon" href="/img/favicon.ico" />
+  
+  <link
+    rel="stylesheet"
+    href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+  />
+  
+<link rel="stylesheet" href="/css/blog.css">
+
+  
+<link rel="stylesheet" href="/css/global.css">
+
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="散落的叶子" type="application/atom+xml">
+</head>
+
+  <body>
+    <div class="blog-header section">
+  <nav>
+    <div class="container main header">
+      <a href="/">
+        <img class="logo" src="/img/favicon.ico" />
+      </a>
+      <div class="menu">
+        
+        <a class="menu-item" href="/">
+          <span class="menu-item-text">散落的叶子</span>
+        </a>
+        
+      </div>
+    </div>
+  </nav>
+</div>
+ <div class="section">
+  <div class="container main post">
+    
+    <!-- Title -->
+    <h2 class="title">CMU 15-445 (2023) P2 优化（偷分）攻略</h2>
+    <!-- Date and Author -->
+    <p class="subtitle is-7 has-text-grey">
+      2023-07-21 by Aneureka
+    </p>
+    
+    <!-- Content -->
+    <article class="markdown-body"><p>书接<a href="https://www.aneureka.cn/cmu-15445-p1-opt-2023-07-17/">上文</a>，此番我们来优化一下 CMU 15-445 <a target="_blank" rel="noopener" href="https://15445.courses.cs.cmu.edu/spring2023/project2/">P2</a> 的实现。</p>
+<p>温馨提示：</p>
+<ul>
+<li>本文适用于 P2 实验部分已经完成、希望探讨 P2 优化思路和方案的同学，关于实验的正确实现请独立思考和实现</li>
+<li>本文中 P2 的优化方案并不基于上文中 P1 的优化，可以独立阅读，欢迎大佬们一起讨论潜在的优化空间 ;-)</li>
+</ul>
+<h2 id="优化结果"><a href="#优化结果" class="headerlink" title="优化结果"></a>优化结果</h2><p>经过优化后，在 Leaderboard 中暂列第一（2023-07-21）☃️</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/e6fd9809911e4cf0f9d4a9a793016bb4.png" alt="e6fd9809911e4cf0f9d4a9a793016bb4"></p>
+<h2 id="Workload-分析"><a href="#Workload-分析" class="headerlink" title="Workload 分析"></a>Workload 分析</h2><p>照例，我们先看下 P2 的 <a target="_blank" rel="noopener" href="https://github.com/cmu-db/bustub/blob/master/tools/btree_bench/btree_bench.cpp">benchmark</a> 做了什么事情：</p>
+<ol>
+<li>初始化 B+ 树：调用 BPlusTree::Insert <strong>按顺序</strong>插入总共 100000 个键值对（<strong>此过程不计入性能指标</strong>）</li>
+<li>使用 4 个读线程和 2 个写线程并发、随机、稀疏地读写 B+ 树（统计性能指标）</li>
+</ol>
+<p>因此，我们重点需要优化的是步骤 2 的性能表现。在步骤 2 开始前，B+ 树已经被初始化构建完成，所以我们应该尽量减少步骤 2 稀疏写操作对 B+ 树的结构产生影响，最好是保持所有的写操作都能原地完成而无需进行节点的调整（例如节点的分裂和合并）。</p>
+<p>到这里，在没有其他信息辅助的情况下，我们可以初步得出优化路线：</p>
+<p><strong>利用 B+ 树初始化过程的有序性，保证 B+ 树初始化后到达一个相对稳定的状态（即不会因为后续的稀疏写操作发生节点分裂、合并等调整），然后通过乐观锁加速后续的读写操作</strong>。</p>
+<p>确定整体的优化路线之后，如上文所说，profiling 也是一个非常重要的优化目标来源，因此接下来我们会不断经历「做 profiling -&gt; 寻找性能瓶颈 -&gt; 思考优化方案 -&gt; 实现优化方案 -&gt; 重新 profiling」的过程，本文也会沿着这个思路，按照子优化项组织和展开。</p>
+<h2 id="优化一：LRU-K-gt-LRU"><a href="#优化一：LRU-K-gt-LRU" class="headerlink" title="优化一：LRU-K -&gt; LRU"></a>优化一：LRU-K -&gt; LRU</h2><p>按照国际惯例，先跑个火焰图吧。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/ebdabb5a6a87b6871f95f5d42b264d98.png" alt="ebdabb5a6a87b6871f95f5d42b264d98"></p>
+<p>这个图看上去貌似没什么毛病，但仔细观察就能窥见端倪：LRUKReplacer::RecordAccess 占了 FetchPage 接近 90% 的时间！这意味着 FetchPage 以博尔特的速度跑完空闲队列读写、新页初始化、页帧映射关系读写等一系列的操作后，在 LRUKReplacer 这里点了杯咖啡，喝完再跑到终点。这明显是不符合预期的。</p>
+<p>于是我们深入代码，发现在 LRUKReplacer 目前的实现中，当某个节点访问满 K 次时，后续记录访问时间需要不断更新它在「已满 K 次访问的节点链表」中的位置，这个操作是 O(N) 的，占了 RecordAccess 执行时间的 80%（为什么 P1 没有出现这个问题？因为在 P1 中绝大多数节点活不到访问满 K 次（x</p>
+<p>因此我们考虑把这个 O(N) 的耗时操作优化到 O(1)，怎么优化？“降级”到 LRU 呀。LRU 相比 LRU-K 最大的优势是 RecordAccess 可以以 O(1) 的时间完成，而且其淘汰策略见不得比 LRU-K 差，同时 P2 也不会对 LRUKReplacer 实现做约束，那不就可以偷家了嘛。</p>
+<p>花 20 分钟左右进行 LRU-K -&gt; LRU 改造后，我们就轻松获得了超过两倍的 QPS 提升。可以看到，在切到 LRU 后，FetchPage 时间缩短了，RecordAccess 的时间占比也明显缩小了（优化后时间占比仅为 20%）。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/image-20230721160305263.png" alt="image-20230721160305263"></p>
+<h2 id="优化二：B-树节点插入后重分布-乐观锁"><a href="#优化二：B-树节点插入后重分布-乐观锁" class="headerlink" title="优化二：B+ 树节点插入后重分布 + 乐观锁"></a>优化二：B+ 树节点插入后重分布 + 乐观锁</h2><p>这理应是我们的重头戏 ;-)</p>
+<p><strong>什么节点是不稳定的？即将发生分裂或合并的节点，也即接近半满和饱和的节点。</strong>在我们目前的实现中，<strong>B+ 树被顺序插入数据后实际上叶子节点几乎都处于一个不稳定的状态</strong>。例如一个叶子节点 A 在插入数据指到饱和并分裂后，形成新的半满节点 A 和 A’，由于是顺序插入，所以新的数据会被填充到 A’，而 <strong>A 就不会再被插入数据了</strong>，接着 A’ 也享受与 A 一样的待遇，如此反复，直到 B+ 树的叶子节点中除了最后一个节点外都是 50% 填充率。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/image-20230721162722027.png" alt="image-20230721162722027"></p>
+<p>通过对 benchmark 过程中，B+ 树发生的分裂和合并次数的统计（步骤一发生的分裂和合并不计入），我们也能发现在优化前 B+ 树调整的次数还是挺高的。</p>
+<pre><code>优化前（初始化过程不计入）：
+#insert: 590645
+#split: 774
+#remove: 173677
+#merge or redistribute: 18151
+</code></pre>
+<p>因此，在遇到插入饱和节点的时候，我们要<strong>优先赠与部分数据给左边兄弟节点</strong>，其次再考虑分裂当前节点。给多少节点好呢？理论上在均匀插入、删除的时候，应该是半满和饱和的中间值最好（即 75% 左右）。不过观察上面的数据，合并发生的概率比分裂低很多，所以我们应该适当把填充率调高。加上好久之前就看到<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/636275627">群青大佬的文章</a>，所以我第一次就尝试了 90% 的填充率，发现优化后在步骤二完全不发生分裂和合并，所以就直接运用了前人的智慧~</p>
+<pre><code>优化后（初始化过程不计入）：
+#insert: 591156
+#split: 0
+#remove: 173454
+#merge or redistribute: 0
+</code></pre>
+<p>做好 B+ 树插入的优化后，我们就可以开始用乐观锁代替悲观锁，只在叶子节点发生写锁同步，从而保证在 crabbing 过程的并发度维持在一个较高的水平。</p>
+<p>经此一役，QPS 应该有显著提升吧？自信满满地提交了一波 Leaderboard，发现 QPS 只有原来的 1.25 倍！！</p>
+<p>怎么回事？</p>
+<h2 id="优化三：Buffer-Pool-分段"><a href="#优化三：Buffer-Pool-分段" class="headerlink" title="优化三：Buffer Pool 分段"></a>优化三：Buffer Pool 分段</h2><p>再跑一次 profiling ——</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/93252bb1ee26de88af0985b9cdfaf1a3.png" alt="93252bb1ee26de88af0985b9cdfaf1a3"></p>
+<p>发现火焰图中产生很多平顶，全在 BufferPoolManager 的大锁上，至此我们知道 B+ 树本身的性能已经被差不多榨干了，<strong>BufferPoolManager 的大锁作为隐藏 boss 跳出来了</strong>。</p>
+<p>在 P2 的 benchmark 中，由于 DiskManager 采用的是 0ms 延迟的 DiskManagerUnlimitedMemory，因此基本不构成性能瓶颈，反而是 BufferPoolManager 的大锁坏了事情。因此，联想到 Java 中 ConcurrentHashMap 的分段锁优化和各种热 key 拆分策略（知识迁移），我们也可以尝试将 BufferPool 分段，将大锁拆分成几把段锁，每把锁协调一部分资源的调度，然后再根据 page_id 做 hash 进行请求分发，岂不美哉？整体思路对应视图如下：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/image-20230721172236876.png" alt="image-20230721172236876"></p>
+<p>分段也会产生一些问题：</p>
+<ul>
+<li><strong>什么时候分段？分为几段？</strong>由于分段也会产生额外的 overhead，而且在 pool size 较小时，大锁可能并不是瓶颈，所以我们可以划分一个触发分段的 pool size，比如为 256 ;-)<br>另外，经过测试，分段数为 12 左右时，性能表现较高</li>
+<li><strong>分段可能导致缓冲池资源分布不均问题</strong>：例如在 pool_size=32、segment_count=8 时，考虑一个极端情况，下游有个线程正在不断读写 page_id=0,8,16,24 的页面，把 segment_index=0 的子缓冲池占满，此时如果有另一个线程需要读写 page_id=32,40 的页面就会发现缓冲池 FetchPage 失败；但在分段前是没有这个问题的<ul>
+<li>解决方案：在 pool size 较大的场景才开始分段，分段数不能过高，其次真实场景中一般读写是比较均匀的</li>
+<li>题外话：在正常的资源拆分处理中，会有跳单策略，但我们这个场景并不适合</li>
+</ul>
+</li>
+</ul>
+<p>做完 BufferPool 分段优化后，QPS 再次提升了两倍 (20w -&gt; 60w），登顶 Leaderboard~ 🎊</p>
+<p>看看做完优化后的火焰图，可以看到平顶已大幅缩小，并发度也提高了。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/43633668c90e813a165e480cf0bfdbfb.png" alt="43633668c90e813a165e480cf0bfdbfb"></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>整个优化和文章记录的过程跟 P1 差不多，耗时两天左右，又是收获满满~ </p>
+<p>PS: P3 和 P4 的优化暂时应该不动笔了，当下有其他更重要的事情需要完成，后面有空再来写写（当然也有一定概率真香哈哈哈）~ 期待大佬们的思路~</p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/c4c333dfd2c1195e15d20e0a3cd0a9c5.png" alt="c4c333dfd2c1195e15d20e0a3cd0a9c5"></p>
+<p>如果一定要有一个 takeaway，我希望是<strong>「性能调优要遵循基本法」</strong> 🥵</p>
+<p>最后，希望你看完本文有所收获，祝你在数据库领域披荆斩棘 🥳</p>
+</article>
+    
+    <div id="giscus-container" class="giscus"></div>
+    
+    
+  </div>
+</div>
+
+
+<script
+  src="https://giscus.app/client.js"
+  data-repo="aneureka/Aneureka.github.io"
+  data-repo-id="MDEwOlJlcG9zaXRvcnkxMjY0Nzk4MzY="
+  data-category="Announcements"
+  data-category-id="DIC_kwDOB4nt3M4CX9S7"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="bottom"
+  data-theme="light_protanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async
+></script>
+
+
+
+ <!-- Footer -->
+<footer class="section">
+  <div class="container main footer">
+    <ul class="contact-list">
+      
+      <li class="contact-list-item">
+        <a href="mailto:aneureka2@gmail.com">Email</a>
+        <a href="mailto:aneureka2@gmail.com">💌</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">Github</a>
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">⭐️</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">Twitter</a>
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">🐦</a>
+      </li>
+      
+    </ul>
+    <div class="copyright">
+      散落的叶子 · 2017 -
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      · <a target="_blank" rel="noopener" href="https://beian.miit.gov.cn">粤ICP备2021087752号</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script>
+  hljs.highlightAll();
+</script>
+
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-56506279-6");
+    </script>
+  </body>
+</html>
