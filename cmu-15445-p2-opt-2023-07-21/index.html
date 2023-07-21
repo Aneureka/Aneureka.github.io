@@ -123,7 +123,7 @@
 <p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/93252bb1ee26de88af0985b9cdfaf1a3.png" alt="93252bb1ee26de88af0985b9cdfaf1a3"></p>
 <p>发现火焰图中产生很多平顶，全在 BufferPoolManager 的大锁上，至此我们知道 B+ 树本身的性能已经被差不多榨干了，<strong>BufferPoolManager 的大锁作为隐藏 boss 跳出来了</strong>。</p>
 <p>在 P2 的 benchmark 中，由于 DiskManager 采用的是 0ms 延迟的 DiskManagerUnlimitedMemory，因此基本不构成性能瓶颈，反而是 BufferPoolManager 的大锁坏了事情。因此，联想到 Java 中 ConcurrentHashMap 的分段锁优化和各种热 key 拆分策略（知识迁移），我们也可以尝试将 BufferPool 分段，将大锁拆分成几把段锁，每把锁协调一部分资源的调度，然后再根据 page_id 做 hash 进行请求分发，岂不美哉？整体思路对应视图如下：</p>
-<p><img src="/Users/hiki/Desktop/image-20230721172236876.png" alt="image-20230721172236876"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/Aneureka/images@images/uPic/image-20230721172236876%20copy.png" alt="image-20230721172236876"></p>
 <p>分段也会产生一些问题：</p>
 <ul>
 <li><strong>什么时候分段？分为几段？</strong>由于分段也会产生额外的 overhead，而且在 pool size 较小时，大锁可能并不是瓶颈，所以我们可以划分一个触发分段的 pool size，比如为 256 ;-)<br>另外，经过测试，分段数为 12 左右时，性能表现较高</li>
