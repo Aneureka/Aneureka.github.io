@@ -1,0 +1,318 @@
+<html>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="Aneureka" />
+  <meta name="description" content="要技艺超群，要予人温暖。" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    property="og:title"
+    content="Type traits 练习：像操作 vector 一样操作 tuple 类型 · 散落的叶子"
+  />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://www.aneureka.cn/type-traits-practice-tuple-type-2023-07-30/index.html" />
+  <meta property="og:description" content="要技艺超群，要予人温暖。" />
+  <meta property="og:image" content="https://www.aneureka.cn/img/favicon.ico" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@Aneureka" />
+  <meta name="twitter:url" content="https://www.aneureka.cn/type-traits-practice-tuple-type-2023-07-30/index.html" />
+  <meta name="twitter:title" content="散落的叶子" />
+  <meta name="twitter:description" content="要技艺超群，要予人温暖。" />
+  <meta name="twitter:image" content="https://www.aneureka.cn/img/cover.png" />
+  <title>
+    Type traits 练习：像操作 vector 一样操作 tuple 类型 · 散落的叶子
+  </title>
+  
+  <link rel="icon" href="/img/favicon.ico" />
+  <link rel="apple-touch-icon" href="/img/favicon.ico" />
+  <link rel="bookmark" href="/img/favicon.ico" />
+  <link rel="shortcut icon" href="/img/favicon.ico" />
+  
+  <link
+    rel="stylesheet"
+    href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+  />
+  
+<link rel="stylesheet" href="/css/blog.css">
+
+  
+<link rel="stylesheet" href="/css/global.css">
+
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="散落的叶子" type="application/atom+xml">
+</head>
+
+  <body>
+    <div class="blog-header section">
+  <nav>
+    <div class="container main header">
+      <a href="/">
+        <img class="logo" src="/img/favicon.ico" />
+      </a>
+      <div class="menu">
+        
+        <a class="menu-item" href="/">
+          <span class="menu-item-text">散落的叶子</span>
+        </a>
+        
+      </div>
+    </div>
+  </nav>
+</div>
+ <div class="section">
+  <div class="container main post">
+    
+    <!-- Title -->
+    <h2 class="title">Type traits 练习：像操作 vector 一样操作 tuple 类型</h2>
+    <!-- Date and Author -->
+    <p class="subtitle is-7 has-text-grey">
+      2023-07-30 by Aneureka
+    </p>
+    
+    <!-- Content -->
+    <article class="markdown-body"><p><em>前排提醒：本文仅做学习交流之用，实际项目中如有条件请尽量使用 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/constraints">Constraints and concepts</a> (since C++20) 。</em></p>
+<p>Type traits 是 C++ 中通过 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/sfinae">SFINAE</a> (Substitution Failure Is Not An Error) 机制在编译期获取静态类型信息的一种技术。由于单一模板特化匹配失败并不一定造成最终编译失败，因此我们可以构造一些模板的特化，去尝试匹配一个静态类型，如果匹配上了，那<strong>说明这个静态类型符合我们规定的一些性质</strong>，接下来我们就可以利用这个性质去提取我们想要的信息，从而实现“萃取”。</p>
+<h2 id="从-enable-if-说起"><a href="#从-enable-if-说起" class="headerlink" title="从 enable_if 说起"></a>从 <code>enable_if</code> 说起</h2><p>在进入正文之前，我们先举个经典且简单的例子——实现一个 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/types/enable_if"><code>enable_if</code></a>，初步感受一下 Type traits。</p>
+<pre><code class="cpp">template &lt;bool Cond, typename T = void&gt;
+struct enable_if &#123;&#125;;
+</code></pre>
+<p>首先 <code>enable_if</code> 的模板参数应该含有判断条件 <code>Cond</code>，以及一个可选的条件成立时返回的类型 <code>T</code>，我们可以写一个 <code>enable_if</code> 的偏特化来实现这个萃取。</p>
+<pre><code class="cpp">template &lt;typename T&gt;
+struct enable_if&lt;true, T&gt; &#123;
+    using type = T;
+&#125;
+</code></pre>
+<p>这样，外部在需要对某个类型做一些约束的时候，就可以使用 <code>enable_if</code> 来实现了（<code>enable_if</code> 可以用在很多地方）</p>
+<pre><code class="cpp">// 当 T 不是整数类型时，enable_if 结构体内没有 type，此时模板匹配失败
+// 由于已经没有其他模板，因此最终编译失败
+template &lt;typename T, typename = enable_if&lt;std::is_integral_v&lt;T&gt;&gt;::type&gt;
+void do_sth_on_integral(T &amp;&amp;) &#123;&#125;
+</code></pre>
+<p>以上代码可以在 <a target="_blank" rel="noopener" href="https://godbolt.org/z/n7KWhMKzv">godbolts</a> 自己尝试一下。</p>
+<h2 id="一些有用的工具"><a href="#一些有用的工具" class="headerlink" title="一些有用的工具"></a>一些有用的工具</h2><p>再开始研究 Tuple 的类型之前，我们先基于 boost 写个打印参数类型和参数取值的工具函数，方便后续验证和测试。</p>
+<pre><code class="cpp">#include &lt;boost/type_index.hpp&gt;
+#include &lt;iostream&gt;
+
+using boost::typeindex::type_id_with_cvr;
+
+template &lt;typename T&gt;
+constexpr void print_type() &#123;
+  std::cout &lt;&lt; type_id_with_cvr&lt;T&gt;().pretty_name() &lt;&lt; &quot;\n&quot;;
+&#125;
+
+constexpr void print_value(auto &amp;&amp;value) &#123;
+  std::cout &lt;&lt; value &lt;&lt; &quot;\n&quot;;
+&#125;
+</code></pre>
+<h2 id="声明一个-Tuple"><a href="#声明一个-Tuple" class="headerlink" title="声明一个 Tuple"></a>声明一个 Tuple</h2><p>回到主题，我们定义一个 Tuple 来保存类型列表信息（如果对可变模板参数还不了解可以参考<a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/parameter_pack">这里</a>）。</p>
+<pre><code class="cpp">template &lt;typename... Ts&gt;
+struct Tuple &#123;&#125;;
+
+print_type&lt;Tuple&lt;int, float&gt;&gt;(); // Tuple&lt;int, float&gt;
+</code></pre>
+<p><em>注意，由于本文我们只关注对 Tuple 类型的操作，因此这里并不对 Tuple 的定义做任何细化。</em></p>
+<h2 id="concat-type-合并两个-Tuple-的类型"><a href="#concat-type-合并两个-Tuple-的类型" class="headerlink" title="concat_type: 合并两个 Tuple 的类型"></a><code>concat_type</code>: 合并两个 Tuple 的类型</h2><p>我们先从一个简单的例子开始，试着合并两个 Tuple 的类型，构造一个新的 Tuple，可以想到默认模板应该是长这样：</p>
+<pre><code class="cpp">template &lt;typename Tup1, typename Tup2&gt;
+struct concat_type &#123;&#125;;
+</code></pre>
+<p>这个默认模板都没有对 <code>Tup1</code>、<code>Tup2</code> 做任何约束，它们甚至都不一定是 <code>Tuple</code> 类型。因此，我们需要<strong>假设 <code>Tup1</code>、<code>Tup2</code> 是由特定类型序列构成的 Tuple 类型，并基于这个假设构造一个偏特化模板</strong>：</p>
+<pre><code class="cpp">// 假设 Tup1 是 Tuple&lt;Ts1...&gt;，Tup2 是 Tuple&lt;Ts2...&gt;，基于此编写偏特化模板，
+// 如果匹配到这个偏特化模板说明类型参数符合这个假设
+template &lt;typename... Ts1, typename... Ts2&gt;
+struct concat_type&lt;Tuple&lt;Ts1...&gt;, Tuple&lt;Ts2...&gt;&gt; &#123;
+  using type = Tuple&lt;Ts1..., Ts2...&gt;;
+&#125;;
+
+print_type&lt;concat_type&lt;Tuple&lt;int, float&gt;, Tuple&lt;char&gt;&gt;::type&gt;(); // Tuple&lt;int, float, char&gt;
+</code></pre>
+<h2 id="push-front-type-在-Tuple-前面添加一个类型"><a href="#push-front-type-在-Tuple-前面添加一个类型" class="headerlink" title="push_front_type: 在 Tuple 前面添加一个类型"></a><code>push_front_type</code>: 在 Tuple 前面添加一个类型</h2><p>类似地，默认模板还是比较好定义的：</p>
+<pre><code class="cpp">template &lt;typename T, typename Tup&gt;
+struct push_front_type &#123;&#125;;
+</code></pre>
+<p>同样，我们基于 「<code>Tup</code> 是 <code>Tuple&lt;Ts...&gt;</code> 类型」 这个假设编写偏特化模板：</p>
+<pre><code class="cpp">// 构造一个 push_front_type 的偏特化来容纳特定类型的 Tuple
+template &lt;typename T, typename... Ts&gt;
+struct push_front_type&lt;T, Tuple&lt;Ts...&gt;&gt; &#123; 
+  using type = Tuple&lt;T, Ts...&gt;; // 然后我们就可以合并声明一个新的 Tuple 类型了
+&#125;;
+</code></pre>
+<p><code>push_back_type</code>、<code>pop_front_type</code>、<code>pop_back_type</code> 也是差不多的，这里不再赘述，留给聪明的读者有空练习~</p>
+<h2 id="insert-type-在-Tuple-中插入一个类型"><a href="#insert-type-在-Tuple-中插入一个类型" class="headerlink" title="insert_type: 在 Tuple 中插入一个类型"></a><code>insert_type</code>: 在 Tuple 中插入一个类型</h2><pre><code class="cpp">template &lt;size_t N, typename T, typename Tup&gt;
+struct insert_type &#123;&#125;;
+</code></pre>
+<p><code>insert_type</code> 的模板多了一个模板参数 N 表示插入的位置，看起来要难一些。这时候我们需要利用递归的思想——在 Tuple 第 <code>N</code> 个位置插入类型 <code>T</code>，等价于把 Tuple 的第一个类型 <code>T0</code> 提取出来之后，与 Tuple 的剩余类型的第 <code>N - 1</code> 个位置插入类型 <code>T</code> 合并起来，即 <code>insert_type&lt;N, T, Tup&lt;T0, Ts...&gt;&gt;::type == concat_type&lt;Tuple&lt;T0&gt;, insert_type&lt;N - 1, T, typename Tuple&lt;Ts...&gt;&gt;&gt;::type</code>：</p>
+<pre><code class="cpp">// 偏特化 1
+template &lt;size_t N, typename T, typename T0, typename... Ts&gt;
+struct insert_type&lt;N, T, Tuple&lt;T0, Ts...&gt;&gt; &#123;
+  using type = concat_type&lt;Tuple&lt;T0&gt;, typename insert_type&lt;N - 1, T, Tuple&lt;Ts...&gt;&gt;::type&gt;::type; // 这里 typename 表明 ::type 是类型而不是其他东西
+&#125;;
+</code></pre>
+<p>接下来我们需要对递归终止的情况做偏特化：</p>
+<pre><code class="cpp">// 偏特化 2: 当 N == 0 且 Tuple 仍剩余部分类型时，类型 T 插入到当前 Tuple 的最前方
+template &lt;typename T, typename T0, typename... Ts&gt;
+struct insert_type&lt;0, T, Tuple&lt;T0, Ts...&gt;&gt; &#123;
+ using type = Tuple&lt;T, T0, Ts...&gt;;
+&#125;;
+
+// 偏特化 3: 当 N == 0 且 Tuple 已经没有类型时，我们直接返回一个 Tuple&lt;T&gt;
+template &lt;typename T&gt;
+struct insert_type&lt;0, T, Tuple&lt;&gt;&gt; &#123;
+  using type = Tuple&lt;T&gt;;
+&#125;;
+</code></pre>
+<p>可能有小伙伴会问，为什么需要 <code>T0</code>？去掉 <code>T0</code> 后，两个偏特化模板不就能合并为一个了，看起来还更简洁：</p>
+<pre><code class="cpp">template &lt;typename T, typename... Ts&gt;
+struct insert_type&lt;0, T, Tuple&lt;Ts...&gt;&gt; &#123;
+ using type = Tuple&lt;T, Ts...&gt;;
+&#125;;
+</code></pre>
+<p>这里主要是因为这个偏特化与偏特化 1 特化程度相同（一个对 <code>N</code> 更加特化，一个对 <code>Tup</code> 更加特化），因此<strong>编译器无法决议使用哪个偏特化模板</strong>。</p>
+<p>另外，<code>erase_type</code> 与 <code>insert_type</code> 是类似的，留给读者实现啦~</p>
+<h2 id="get-type-获取-Tuple-特定下标的类型"><a href="#get-type-获取-Tuple-特定下标的类型" class="headerlink" title="get_type: 获取 Tuple 特定下标的类型"></a><code>get_type</code>: 获取 Tuple 特定下标的类型</h2><p>定义好默认模板：</p>
+<pre><code class="cpp">template &lt;size_t N, typename Tup&gt;
+struct get_type &#123;&#125;;
+</code></pre>
+<p>同样使用递归的思路，如果当前 <code>N</code> 不为 0，我们就忽略 Tuple 中的第一个类型，取从第二个类型开始的第 <code>N - 1</code> 个，以此类推。</p>
+<p>因此，在下面的代码中，我们假设当前 Tuple 中是存在一个以上类型的，那我们就可以把第一个萃取出来，写一个 <code>get_type</code> 的偏特化模板：</p>
+<pre><code class="cpp">template &lt;size_t N, typename T, typename... Ts&gt;
+struct get_type&lt;N, Tuple&lt;T, Ts...&gt;&gt; &#123;
+  // 利用 get_type&lt;N, Tuple&lt;T, Ts...&gt; == get_type&lt;N - 1, Tuple&lt;Ts...&gt;&gt; 递推式
+  using type = get_type&lt;N - 1, Tuple&lt;Ts...&gt;&gt;::type;
+&#125;;
+</code></pre>
+<p>以上的递归偏特化并没有一个终止条件，我们需要加上当 <code>N == 0</code> 的情况：</p>
+<pre><code class="cpp">template &lt;typename T, typename... Ts&gt;
+struct get_type&lt;0, Tuple&lt;T, Ts...&gt;&gt; &#123;
+  using type = T; // 当 N == 0 时，我们直接取当前 tuple 的第一个类型
+&#125;;
+</code></pre>
+<p>这样我们就实现了对特定下表 Tuple 类型的获取。</p>
+<pre><code class="cpp">print_type&lt;get_type&lt;1, Tuple&lt;int, float&gt;&gt;::type&gt;(); // float
+print_type&lt;get_type&lt;2, Tuple&lt;int, float&gt;&gt;::type&gt;(); // compile error: no type named &#39;type&#39; in &#39;get_type&lt;0, Tuple&lt;&gt;&gt;&#39;
+</code></pre>
+<h2 id="front-type-获取-Tuple-的第一个类型"><a href="#front-type-获取-Tuple-的第一个类型" class="headerlink" title="front_type: 获取 Tuple 的第一个类型"></a><code>front_type</code>: 获取 Tuple 的第一个类型</h2><p>前面我们已经实现了 <code>get_type</code>，因此 <code>front_type</code> 实际上直接继承 <code>get_type</code> 就可以了：</p>
+<pre><code class="cpp">template &lt;typename Tup&gt;
+struct front_type : public get_type&lt;0, Tup&gt; &#123;&#125;;
+
+print_type&lt;get_type&lt;0, Tuple&lt;int, float&gt;&gt;::type&gt;(); // int
+</code></pre>
+<p>然而，<code>back_type</code> 就没有那么直接了，因为我们首先需要知道 Tuple 中有多少个类型。可以在实现 <code>size_type</code> 之后再继承 <code>get_type</code> 实现（留给读者做作业 🥵 懒）</p>
+<h2 id="empty-type-判断-Tuple-类型是否为空"><a href="#empty-type-判断-Tuple-类型是否为空" class="headerlink" title="empty_type: 判断 Tuple 类型是否为空"></a><code>empty_type</code>: 判断 Tuple 类型是否为空</h2><p>这个也很简单，只是此时结构体中包含的不再是 type，而是标识 Tuple 类型是否为空的静态布尔值常量了。</p>
+<pre><code class="cpp">template &lt;typename Tup&gt;
+struct empty_type &#123;
+  static constexpr bool value = false;
+&#125;;
+
+template &lt;&gt;
+struct empty_type&lt;Tuple&lt;&gt;&gt; &#123;
+  static constexpr bool value = true;
+&#125;;
+
+print_value(empty_type&lt;Tuple&lt;int&gt;&gt;::value); // 0
+print_value(empty_type&lt;Tuple&lt;&gt;&gt;::value);    // 1
+</code></pre>
+<h2 id="size-type-获取-Tuple-类型的个数"><a href="#size-type-获取-Tuple-类型的个数" class="headerlink" title="size_type: 获取 Tuple 类型的个数"></a><code>size_type</code>: 获取 Tuple 类型的个数</h2><pre><code class="cpp">template &lt;typename Tup&gt;
+struct size_type &#123;&#125;;
+
+template &lt;&gt;
+struct size_type&lt;Tuple&lt;&gt;&gt; &#123;
+  static constexpr size_t value = 0;
+&#125;;
+
+template &lt;typename T0, typename... Ts&gt;
+struct size_type&lt;Tuple&lt;T0, Ts...&gt;&gt; &#123;
+  static constexpr size_t value = 1 + size_type&lt;Tuple&lt;Ts...&gt;&gt;::value;
+&#125;;
+
+print_value(size_type&lt;Tuple&lt;int, float, char&gt;&gt;::value); // 3
+print_value(size_type&lt;Tuple&lt;int&gt;&gt;::value);              // 1
+print_value(size_type&lt;Tuple&lt;&gt;&gt;::value);                 // 0
+</code></pre>
+<p>至此，通过对 Tuple 类型操作的简单实现，我们应该能对 Type traits 有个初步的体会了，如果觉得知识不够巩固，有空的话自己写一遍吧~</p>
+</article>
+    
+    <div id="giscus-container" class="giscus"></div>
+    
+    
+  </div>
+</div>
+
+
+<script
+  src="https://giscus.app/client.js"
+  data-repo="aneureka/Aneureka.github.io"
+  data-repo-id="MDEwOlJlcG9zaXRvcnkxMjY0Nzk4MzY="
+  data-category="Announcements"
+  data-category-id="DIC_kwDOB4nt3M4CX9S7"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="bottom"
+  data-theme="light_protanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async
+></script>
+
+
+
+ <!-- Footer -->
+<footer class="section">
+  <div class="container main footer">
+    <ul class="contact-list">
+      
+      <li class="contact-list-item">
+        <a href="mailto:aneureka2@gmail.com">Email</a>
+        <a href="mailto:aneureka2@gmail.com">💌</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">Github</a>
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">⭐️</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">Twitter</a>
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">🐦</a>
+      </li>
+      
+    </ul>
+    <div class="copyright">
+      散落的叶子 · 2017 -
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      · <a target="_blank" rel="noopener" href="https://beian.miit.gov.cn">粤ICP备2021087752号</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script>
+  hljs.highlightAll();
+</script>
+
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-56506279-6");
+    </script>
+  </body>
+</html>
