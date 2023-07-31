@@ -1,0 +1,290 @@
+<html>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="Aneureka" />
+  <meta name="description" content="要技艺超群，要予人温暖。" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    property="og:title"
+    content="Type traits 练习：编译期快排 · 散落的叶子"
+  />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://www.aneureka.cn/type-traits-practice-quick-sort-2023-07-31/index.html" />
+  <meta property="og:description" content="要技艺超群，要予人温暖。" />
+  <meta property="og:image" content="https://www.aneureka.cn/img/favicon.ico" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@Aneureka" />
+  <meta name="twitter:url" content="https://www.aneureka.cn/type-traits-practice-quick-sort-2023-07-31/index.html" />
+  <meta name="twitter:title" content="散落的叶子" />
+  <meta name="twitter:description" content="要技艺超群，要予人温暖。" />
+  <meta name="twitter:image" content="https://www.aneureka.cn/img/cover.png" />
+  <title>
+    Type traits 练习：编译期快排 · 散落的叶子
+  </title>
+  
+  <link rel="icon" href="/img/favicon.ico" />
+  <link rel="apple-touch-icon" href="/img/favicon.ico" />
+  <link rel="bookmark" href="/img/favicon.ico" />
+  <link rel="shortcut icon" href="/img/favicon.ico" />
+  
+  <link
+    rel="stylesheet"
+    href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+  />
+  
+<link rel="stylesheet" href="/css/blog.css">
+
+  
+<link rel="stylesheet" href="/css/global.css">
+
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="散落的叶子" type="application/atom+xml">
+</head>
+
+  <body>
+    <div class="blog-header section">
+  <nav>
+    <div class="container main header">
+      <a href="/">
+        <img class="logo" src="/img/favicon.ico" />
+      </a>
+      <div class="menu">
+        
+        <a class="menu-item" href="/">
+          <span class="menu-item-text">散落的叶子</span>
+        </a>
+        
+      </div>
+    </div>
+  </nav>
+</div>
+ <div class="section">
+  <div class="container main post">
+    
+    <!-- Title -->
+    <h2 class="title">Type traits 练习：编译期快排</h2>
+    <!-- Date and Author -->
+    <p class="subtitle is-7 has-text-grey">
+      2023-07-31 by Aneureka
+    </p>
+    
+    <!-- Content -->
+    <article class="markdown-body"><p><em>前排提醒：本文仅做学习交流之用，实际项目中如有条件请尽量使用 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/constraints">Constraints and concepts</a> (since C++20) 。</em></p>
+<p>既<a href="https://www.aneureka.cn/type-traits-practice-tuple-type-2023-07-30/">上回</a>我们通过对 tuple 的类型操作，尝试了一下 Type traits 之后，本文我们开始加点强度，实现一个基于模板元编程的编译期快排（不妨在这里思考一下，如果你来实现，大概分成哪几个步骤呢？跟运行时的快排有什么区别？）</p>
+<p>本文涉及到的所有代码均在 <a target="_blank" rel="noopener" href="https://godbolt.org/z/6xM3znx17">godbolts</a> 中，大家有需要可以自取~</p>
+<h2 id="定义数据类型"><a href="#定义数据类型" class="headerlink" title="定义数据类型"></a>定义数据类型</h2><p>思考一下，我们要排序的是什么数据，这些数据存在哪里？</p>
+<p>答案比较显然，存在模板参数里，作为结构体的编译期信息。</p>
+<pre><code class="cpp">template &lt;int... Ns&gt;  // 为简化问题，我们直接使用 int 作为待排序的数据类型
+struct Nums &#123;&#125;;
+</code></pre>
+<p>在开始编写快排之前，我们可以定义一些操作 Nums 的操作，比如将两个 Nums 合并起来。</p>
+<pre><code class="cpp">// 以下这段代码你应该可以很快理解了
+template &lt;typename T1, typename T2&gt;
+struct Concat &#123;&#125;;
+
+template &lt;int... Ns1, int... Ns2&gt;
+struct Concat&lt;Nums&lt;Ns1...&gt;, Nums&lt;Ns2...&gt;&gt; &#123;
+  using type = Nums&lt;Ns1..., Ns2...&gt;;
+&#125;;
+</code></pre>
+<h2 id="拆解快排流程"><a href="#拆解快排流程" class="headerlink" title="拆解快排流程"></a>拆解快排流程</h2><p><em>温馨提醒：如果还不了解快排的流程，可以参考下<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Quicksort">维基百科</a>，再阅读剩下的内容。</em></p>
+<p>编译期快排整体流程跟传统快排并没有什么不同：</p>
+<ol>
+<li>基于某个 pivot（一般取首个元素） 将当前数据划分为左右两部分或左、中、右三部分（本文使用三路快排）</li>
+<li>对 1 中划分的左、右部分递归执行快排，直到数组长度小于 2</li>
+</ol>
+<p>因此，我们可以将编译期快排拆解成两个步骤：</p>
+<ol>
+<li>划分数据</li>
+<li>递归执行</li>
+</ol>
+<p>接下来我们将针对这两个步骤分别思考和实现。</p>
+<h2 id="划分数据"><a href="#划分数据" class="headerlink" title="划分数据"></a>划分数据</h2><p>直接取 Nums 中的数据做 pivot 划分复杂度会高一些，我们可以先考虑在给定一个 pivot 元素的情况下，怎样把将 Nums 划分为三个部分。现在我们可以开始定义 Divide 类模板了。</p>
+<pre><code class="cpp">template &lt;int Pivot, typename T&gt;
+struct Divide &#123;&#125;;
+
+template &lt;int Pivot, int... Ns&gt;
+struct Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt; &#123;&#125;;
+
+template &lt;int Pivot&gt;
+struct Divide&lt;Pivot, Nums&lt;&gt;&gt; &#123;
+  using left = Nums&lt;&gt;;
+  using mid = Nums&lt;&gt;;
+  using right = Nums&lt;&gt;;
+&#125;;
+</code></pre>
+<p>写出上面三个模板还是比较简单的，关键在于怎样把 Divide 的递推关系找出来。其实也比较简单，我们只要不断萃取 Nums 中的第一个元素，将其与 pivot 比较，根据比较结果分类讨论写出递推式就可以了~</p>
+<p>实现见以下代码。这里我们用到了 <a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/types/conditional">std::conditional_t</a>（自己实现也是很简单的）</p>
+<pre><code class="cpp">template &lt;int Pivot, int N0, int... Ns&gt;
+struct Divide&lt;Pivot, Nums&lt;N0, Ns...&gt;&gt; &#123;
+  using left =
+      std::conditional_t&lt;
+          N0 &lt; Pivot,
+        typename Concat&lt;Nums&lt;N0&gt;,
+                        typename Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt;::left
+                       &gt;::type,
+        typename Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt;::left
+          &gt;;
+  using mid = 
+      std::conditional_t&lt;
+        N0 == Pivot,
+        typename Concat&lt;Nums&lt;N0&gt;, typename Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt;::mid&gt;::type,
+        typename Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt;::mid
+      &gt;;
+  using right =
+      std::conditional_t&lt;
+        Pivot &lt; N0,
+        typename Concat&lt;Nums&lt;N0&gt;, typename Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt;::right&gt;::type,
+        typename Divide&lt;Pivot, Nums&lt;Ns...&gt;&gt;::right
+      &gt;;
+&#125;;
+</code></pre>
+<p>测试一下，符合预期：</p>
+<pre><code class="cpp">print_type&lt;Divide&lt;5, Nums&lt;1, 5&gt;&gt;::left&gt;();   // Nums&lt;1&gt;
+print_type&lt;Divide&lt;5, Nums&lt;1, 5&gt;&gt;::mid&gt;();    // Nums&lt;5&gt;
+print_type&lt;Divide&lt;5, Nums&lt;1, 5&gt;&gt;::right&gt;();  // Nums&lt;&gt;
+print_type&lt;Divide&lt;5, Nums&lt;1, 2, 9, 4, 5, 5, 6, 7, 8&gt;&gt;::left&gt;();   // Nums&lt;1, 2, 4&gt;
+print_type&lt;Divide&lt;5, Nums&lt;1, 2, 9, 4, 5, 5, 6, 7, 8&gt;&gt;::mid&gt;();    // Nums&lt;5, 5&gt;
+print_type&lt;Divide&lt;5, Nums&lt;1, 2, 9, 4, 5, 5, 6, 7, 8&gt;&gt;::right&gt;();  // Nums&lt;9, 6, 7, 8&gt;
+</code></pre>
+<p>以上实现的 Divide 模板中，pivot 是由外部传入的，但快排需要直接取 Nums 中的元素作为 pivot，怎么实现呢？</p>
+<p>其实只要继承一下现有的 Divide，我们就能很轻松地写一个取第一个元素作为 pivot 的 DivideInplace 了~</p>
+<pre><code class="cpp">template &lt;typename T&gt;
+struct DivideInplace &#123;&#125;;
+
+template &lt;&gt;
+struct DivideInplace&lt;Nums&lt;&gt;&gt; : Divide&lt;0, Nums&lt;&gt;&gt; &#123;&#125;;
+
+template &lt;int N0, int... Ns&gt;
+struct DivideInplace&lt;Nums&lt;N0, Ns...&gt;&gt; : Divide&lt;N0, Nums&lt;N0, Ns...&gt;&gt; &#123;&#125;;
+</code></pre>
+<p>再测试一下，也没有问题。</p>
+<pre><code class="cpp">print_type&lt;DivideInplace&lt;Nums&lt;1, 2, 3&gt;&gt;::left&gt;();   // Nums&lt;&gt;
+print_type&lt;DivideInplace&lt;Nums&lt;1, 2, 3&gt;&gt;::mid&gt;();    // Nums&lt;1&gt;
+print_type&lt;DivideInplace&lt;Nums&lt;1, 2, 3&gt;&gt;::right&gt;();  // Nums&lt;2, 3&gt;
+print_type&lt;DivideInplace&lt;Nums&lt;3, 2, 1&gt;&gt;::left&gt;();   // Nums&lt;2, 1&gt;
+print_type&lt;DivideInplace&lt;Nums&lt;3, 2, 1&gt;&gt;::mid&gt;();    // Nums&lt;3&gt;
+print_type&lt;DivideInplace&lt;Nums&lt;3, 2, 1&gt;&gt;::right&gt;();  // Nums&lt;&gt;
+</code></pre>
+<p>至此，我们就把最难的一步——划分数据写完了，接下来实际上就比较简单了。</p>
+<h2 id="递归执行"><a href="#递归执行" class="headerlink" title="递归执行"></a>递归执行</h2><p>首先我们还是定义一个快排模板，并考虑当 Nums 为空或只有一个元素的情况。</p>
+<pre><code class="cpp">template &lt;typename T&gt;
+struct QuickSort &#123;&#125;;
+
+template &lt;&gt;
+struct QuickSort&lt;Nums&lt;&gt;&gt; &#123;
+  using type = Nums&lt;&gt;;
+&#125;;
+
+template &lt;int N&gt;
+struct QuickSort&lt;Nums&lt;N&gt;&gt; &#123;
+  using type = Nums&lt;N&gt;;
+&#125;;
+</code></pre>
+<p>然后就是递推式了，也不太复杂：</p>
+<pre><code class="cpp">template &lt;int... Ns&gt;
+struct QuickSort&lt;Nums&lt;Ns...&gt;&gt; &#123;
+  using divide = DivideInplace&lt;Nums&lt;Ns...&gt;&gt;;
+  using left = typename QuickSort&lt;typename divide::left&gt;::type;
+  using mid = typename divide::mid;
+  using right = typename QuickSort&lt;typename divide::right&gt;::type;
+  using type = typename Concat&lt;typename Concat&lt;left, mid&gt;::type, right&gt;::type;
+&#125;;
+</code></pre>
+<p>最终测试，没问题！</p>
+<pre><code class="cpp">print_type&lt;QuickSort&lt;Nums&lt;&gt;&gt;::type&gt;();          // Nums&lt;&gt;
+print_type&lt;QuickSort&lt;Nums&lt;3&gt;&gt;::type&gt;();         // Nums&lt;3&gt;
+print_type&lt;QuickSort&lt;Nums&lt;1, 1&gt;&gt;::type&gt;();      // Nums&lt;1, 1&gt;
+print_type&lt;QuickSort&lt;Nums&lt;1, 2, 3&gt;&gt;::type&gt;();   // Nums&lt;1, 2, 3&gt;
+print_type&lt;QuickSort&lt;Nums&lt;3, 2, 1&gt;&gt;::type&gt;();   // Nums&lt;1, 2, 3&gt;
+print_type&lt;QuickSort&lt;Nums&lt;5, 1, 2, 9, 4, 5, 6, 7, 8&gt;&gt;::type&gt;();  // Nums&lt;1, 2, 4, 5, 5, 6, 7, 8, 9&gt;
+</code></pre>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>完工~ 要不你写个编译期归并排序练练手怎么样 🥵</p>
+</article>
+    
+    <div id="giscus-container" class="giscus"></div>
+    
+    
+  </div>
+</div>
+
+
+<script
+  src="https://giscus.app/client.js"
+  data-repo="aneureka/Aneureka.github.io"
+  data-repo-id="MDEwOlJlcG9zaXRvcnkxMjY0Nzk4MzY="
+  data-category="Announcements"
+  data-category-id="DIC_kwDOB4nt3M4CX9S7"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="bottom"
+  data-theme="light_protanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async
+></script>
+
+
+
+ <!-- Footer -->
+<footer class="section">
+  <div class="container main footer">
+    <ul class="contact-list">
+      
+      <li class="contact-list-item">
+        <a href="mailto:aneureka2@gmail.com">Email</a>
+        <a href="mailto:aneureka2@gmail.com">💌</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">Github</a>
+        <a target="_blank" rel="noopener" href="https://github.com/aneureka">⭐️</a>
+      </li>
+      
+      <li class="contact-list-item">
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">Twitter</a>
+        <a target="_blank" rel="noopener" href="https://twitter.com/Aneureka">🐦</a>
+      </li>
+      
+    </ul>
+    <div class="copyright">
+      散落的叶子 · 2017 -
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      · <a target="_blank" rel="noopener" href="https://beian.miit.gov.cn">粤ICP备2021087752号</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script>
+  hljs.highlightAll();
+</script>
+
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-56506279-6");
+    </script>
+  </body>
+</html>

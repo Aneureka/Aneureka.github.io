@@ -6,7 +6,7 @@
   <link href="https://www.aneureka.cn/atom.xml" rel="self"/>
   
   <link href="https://www.aneureka.cn/"/>
-  <updated>2023-07-30T14:21:18.780Z</updated>
+  <updated>2023-07-31T07:11:24.341Z</updated>
   <id>https://www.aneureka.cn/</id>
   
   <author>
@@ -17,11 +17,34 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>Type traits 练习：编译期快排</title>
+    <link href="https://www.aneureka.cn/type-traits-practice-quick-sort-2023-07-31/"/>
+    <id>https://www.aneureka.cn/type-traits-practice-quick-sort-2023-07-31/</id>
+    <published>2023-07-31T04:40:57.000Z</published>
+    <updated>2023-07-31T07:11:24.341Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;&lt;em&gt;前排提醒：本文仅做学习交流之用，实际项目中如有条件请尽量使用 &lt;a href=&quot;https://en.cppreference.com/w/cpp/language/constraints&quot;&gt;Constraints and concepts&lt;/a&gt; (since</summary>
+        
+      
+    
+    
+    
+    
+    <category term="C++" scheme="https://www.aneureka.cn/tags/C/"/>
+    
+  </entry>
+  
+  <entry>
     <title>Type traits 练习：像操作 vector 一样操作 tuple 类型</title>
     <link href="https://www.aneureka.cn/type-traits-practice-tuple-type-2023-07-30/"/>
     <id>https://www.aneureka.cn/type-traits-practice-tuple-type-2023-07-30/</id>
     <published>2023-07-30T07:45:45.000Z</published>
-    <updated>2023-07-30T14:21:18.780Z</updated>
+    <updated>2023-07-30T14:23:33.428Z</updated>
     
     
       
